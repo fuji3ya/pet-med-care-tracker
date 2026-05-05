@@ -1,0 +1,132 @@
+{
+  "identifier": "F4DA7AE6-0F9D-4DF0-A0AE-4B0308B0808A",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_applicationInternalID": "1234567890",
+    "_developerTeamID": "TEAMID",
+    "_lastSynchronizedDate": 768096000,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [
+    {
+      "id": "D9BB52C6-65EC-4E46-AF10-2DD270FB68D8",
+      "localizations": [
+        {
+          "description": "Tend Pets Plus",
+          "displayName": "Tend Pets Plus",
+          "locale": "en_US"
+        }
+      ],
+      "name": "Tend Pets",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "4.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "plus_monthly",
+          "introductoryOffer": {
+            "internalID": "plus_monthly_trial",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "Unlimited reminders and vet summaries",
+              "displayName": "Plus Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "tendpets.plus.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Plus Monthly",
+          "subscriptionGroupID": "D9BB52C6-65EC-4E46-AF10-2DD270FB68D8",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "39.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "plus_yearly",
+          "introductoryOffer": {
+            "internalID": "plus_yearly_trial",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "Unlimited reminders and vet summaries",
+              "displayName": "Plus Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "tendpets.plus.yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Plus Yearly",
+          "subscriptionGroupID": "D9BB52C6-65EC-4E46-AF10-2DD270FB68D8",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "8.99",
+          "familyShareable": true,
+          "groupNumber": 1,
+          "internalID": "family_monthly",
+          "introductoryOffer": {
+            "internalID": "family_monthly_trial",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "Family sharing for multi-pet households",
+              "displayName": "Family Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "tendpets.family.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Family Monthly",
+          "subscriptionGroupID": "D9BB52C6-65EC-4E46-AF10-2DD270FB68D8",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "69.99",
+          "familyShareable": true,
+          "groupNumber": 1,
+          "internalID": "family_yearly",
+          "introductoryOffer": {
+            "internalID": "family_yearly_trial",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
+          },
+          "localizations": [
+            {
+              "description": "Family sharing for multi-pet households",
+              "displayName": "Family Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "tendpets.family.yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Family Yearly",
+          "subscriptionGroupID": "D9BB52C6-65EC-4E46-AF10-2DD270FB68D8",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

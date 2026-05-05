@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tend Pets - Native iOS UI Reference</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./ios-native.css" />
+  </head>
+  <body>
+    <main class="native-page">
+      <section class="native-brief">
+        <p class="eyebrow">Native iOS correction</p>
+        <h1>Tend Pets</h1>
+        <p>
+          This reference separates the actual iPhone app UI from the sales
+          landing page. It uses native iOS patterns: large titles, grouped
+          lists, bottom tabs, sheets, safe areas, and minimum 44pt controls.
+        </p>
+        <div class="brief-grid">
+          <div><strong>Correct</strong><span>Bottom tab navigation</span></div>
+          <div><strong>Correct</strong><span>Grouped forms and lists</span></div>
+          <div><strong>Correct</strong><span>Contextual sheets</span></div>
+          <div><strong>Fixed</strong><span>iPhone 15, 393 x 852 pt</span></div>
+        </div>
+        <a class="back-link" href="./index.html">Back to sales prototype</a>
+        <a class="back-link" href="./simulator-qa.html">Open native simulator QA lane</a>
+      </section>
+
+      <section class="device-stage" aria-label="Native iOS app reference">
+        <div class="iphone">
+          <div class="device-top">
+            <span>9:41</span>
+            <span class="island"></span>
+            <span>100%</span>
+          </div>
+          <div class="app-root">
+            <div id="native-screen" class="native-screen"></div>
+            <nav class="ios-tabbar" aria-label="App tabs">
+              <button class="tabbar-item active" data-native-tab="today">
+                <span class="symbol">&#10003;</span><span>Today</span>
+              </button>
+              <button class="tabbar-item" data-native-tab="pets">
+                <span class="symbol">&#9679;</span><span>Pets</span>
+              </button>
+              <button class="tabbar-item add" data-native-tab="add">
+                <span class="symbol">+</span><span>Add</span>
+              </button>
+              <button class="tabbar-item" data-native-tab="records">
+                <span class="symbol">&#9636;</span><span>Records</span>
+              </button>
+              <button class="tabbar-item" data-native-tab="settings">
+                <span class="symbol">&#9881;</span><span>Settings</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./ios-native.js"></script>
+  </body>
+</html>

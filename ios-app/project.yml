@@ -1,0 +1,31 @@
+name: TendPets
+options:
+  bundleIdPrefix: com.tendpets
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+targets:
+  TendPets:
+    type: application
+    platform: iOS
+    sources:
+      - TendPets/App
+      - TendPets/Models
+      - TendPets/Services
+      - TendPets/Views
+    resources:
+      - TendPets/Resources
+      - StoreKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tendpets.app
+        INFOPLIST_FILE: TendPets/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "5.9"
+    scheme:
+      testTargets: []
+      storeKitConfiguration: StoreKit/TendPets.storekit
