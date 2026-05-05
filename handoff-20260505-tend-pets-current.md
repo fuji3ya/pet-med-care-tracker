@@ -455,3 +455,12 @@ Latest local verification:
 - Browser site routes return 200 for index, privacy, terms, support, native UI, and simulator QA.
 - StoreKit product IDs align across Swift, StoreKit config, and metadata.
 - No Swift TODO/FIXME/fatalError/localhost debug strings found.
+
+GitHub status:
+
+- Private repository created: `https://github.com/fuji3ya/pet-med-care-tracker`
+- Initial source pushed to `main`.
+- GitHub Actions workflow ran successfully:
+  - Run: `https://github.com/fuji3ya/pet-med-care-tracker/actions/runs/25407512172`
+  - Commit: `35082f39c9a5ef40968c6cada5c7465ea91e65b0`
+  - Result: iPhone 15 Simulator build passed on GitHub macOS runner.
