@@ -27,7 +27,19 @@ jobs:
         run: |
           xcodebuild -version
           xcrun simctl list runtimes
-          xcrun simctl list devices available | grep "iPhone 15"
+          xcrun simctl list devicetypes | grep "iPhone 15"
+
+      - name: Create iPhone 15 Simulator
+        run: |
+          set -euo pipefail
+          DEVICE_TYPE=$(xcrun simctl list devicetypes | awk -F '[()]' '/iPhone 15 \(/ { print $2; exit }')
+          RUNTIME=$(xcrun simctl list runtimes available | awk -F ' - ' '/iOS 18.6/ { print $NF; exit } /iOS 18.5/ { candidate=$NF } END { if (candidate) print candidate }')
+          if [ -z "$DEVICE_TYPE" ] || [ -z "$RUNTIME" ]; then
+            echo "Unable to resolve iPhone 15 simulator device type or iOS runtime." >&2
+            exit 1
+          fi
+          SIMULATOR_UDID=$(xcrun simctl create "TendPets iPhone 15" "$DEVICE_TYPE" "$RUNTIME")
+          echo "SIMULATOR_UDID=$SIMULATOR_UDID" >> "$GITHUB_ENV"
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -43,7 +55,7 @@ jobs:
           xcodebuild \
             -project TendPets.xcodeproj \
             -scheme TendPets \
-            -destination "platform=iOS Simulator,name=iPhone 15" \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -skipPackagePluginValidation \
             build | tee xcodebuild.log
 
