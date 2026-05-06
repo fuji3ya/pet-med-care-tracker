@@ -14,6 +14,10 @@ Fallback route:
 - Xcode Cloud after the app record and repository are stable.
 - Bitrise only if Codemagic becomes blocked by pricing, signing, or Apple integration issues.
 
+Not current-route tools:
+
+- `codex-plusplus-ios-simulator` is useful only on a local macOS machine with full Xcode and Codex++ installed. It embeds a mirrored iOS Simulator into Codex's right panel, so it can help local simulator UI QA later, but it does not remove the need for macOS/Xcode and does not replace GitHub Actions, Codemagic, TestFlight, or App Store Connect upload.
+
 Why this route:
 
 - Windows cannot run Xcode, iOS Simulator, or produce an App Store-signed iOS archive locally.
@@ -110,3 +114,7 @@ Cost-control rule:
 - Apple may reject `com.tendpets.app` if the bundle identifier is unavailable; update both `project.yml` and `codemagic.yaml` together.
 - App Store release automation cannot replace human review of screenshots, privacy answers, subscription setup, and medical-safety wording.
 - GitHub-hosted macOS images change over time; the workflow logs Xcode and simulator availability for traceability.
+
+## Tool Evaluation Notes
+
+- `codex-plusplus-ios-simulator`: not useful for the current Windows-only path. Keep as an optional future QA tool if a macOS desktop environment becomes available.

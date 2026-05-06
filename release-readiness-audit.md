@@ -40,6 +40,7 @@ Meaning:
 - Privacy/Terms/Support URLs must be deployed to a real public domain.
 - Screenshots must come from the native SwiftUI app after simulator visual verification.
 - StoreKit sandbox and notification behavior must be tested on Apple infrastructure.
+- `codex-plusplus-ios-simulator` was reviewed and is not part of the no-local-Mac release path because it requires local macOS, full Xcode, and Codex++.
 
 ## Red
 
