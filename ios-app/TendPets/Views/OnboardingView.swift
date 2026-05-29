@@ -188,7 +188,7 @@ struct OnboardingView: View {
                 Color.clear.frame(height: 50)
             }
 
-            Button(isLastStep ? "Add first care" : "Continue") {
+            Button(isLastStep ? "Add my pet" : "Continue") {
                 if isLastStep {
                     onFinish()
                 } else {

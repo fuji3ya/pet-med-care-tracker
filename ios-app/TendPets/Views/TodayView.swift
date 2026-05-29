@@ -14,9 +14,19 @@ struct TodayView: View {
                     HStack(spacing: 12) {
                         CareRingView(progress: todayProgress, initial: String(pet.name.prefix(1)), photoName: pet.photoName)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(pet.name)
-                                .font(.headline)
-                            Text(todaySummaryText)
+                            HStack(spacing: 6) {
+                                Text(pet.name)
+                                    .font(.headline)
+                                if pet.isSample {
+                                    Text("SAMPLE")
+                                        .font(.caption2.weight(.bold))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(TPColor.primarySoft, in: Capsule())
+                                        .foregroundStyle(TPColor.primary)
+                                }
+                            }
+                            Text(pet.isSample ? "Sample data — add your pet to begin" : todaySummaryText)
                                 .font(.subheadline)
                                 .foregroundStyle(TPColor.muted)
                         }

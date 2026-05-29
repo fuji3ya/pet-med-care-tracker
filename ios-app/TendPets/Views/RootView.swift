@@ -9,6 +9,7 @@ private enum AppTab: Hashable {
 }
 
 struct RootView: View {
+    @EnvironmentObject private var appState: AppState
     @AppStorage("tendPetsOnboardingComplete") private var onboardingComplete = false
     @State private var selectedTab: AppTab = .today
     @State private var showOnboarding = false
@@ -69,8 +70,12 @@ struct RootView: View {
                 },
                 onFinish: {
                     onboardingComplete = true
-                    selectedTab = .add
                     showOnboarding = false
+                    // First real action = add YOUR pet. Jump to Pets and open the
+                    // Add Pet sheet instead of dropping the user on Add Care (which
+                    // needs a pet first).
+                    selectedTab = .pets
+                    appState.requestAddPet = true
                 }
             )
         }

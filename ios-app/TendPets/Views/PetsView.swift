@@ -148,6 +148,18 @@ struct PetsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(TPColor.groupedBackground)
+        .onChange(of: appState.requestAddPet) { _, want in
+            if want {
+                sheet = .addPet
+                appState.requestAddPet = false
+            }
+        }
+        .onAppear {
+            if appState.requestAddPet {
+                sheet = .addPet
+                appState.requestAddPet = false
+            }
+        }
         .sheet(item: $sheet) { which in
             switch which {
             case .addPet:

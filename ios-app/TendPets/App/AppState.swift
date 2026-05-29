@@ -7,6 +7,9 @@ final class AppState: ObservableObject {
     @Published var carePlans: [CarePlan]
     @Published var occurrences: [CareOccurrence]
     @Published var records: [CareRecord]
+    /// Set when onboarding finishes so the Pets tab immediately opens the
+    /// "Add your pet" sheet — the first real action is adding the user's own pet.
+    @Published var requestAddPet = false
 
     private let storage = LocalStorage()
 
