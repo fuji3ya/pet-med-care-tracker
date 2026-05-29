@@ -100,6 +100,13 @@ struct PetsView: View {
                                             Text(scheduleText(plan))
                                                 .font(.caption)
                                                 .foregroundStyle(TPColor.muted)
+                                            if let supply = plan.supplyRemaining {
+                                                Text(plan.isLowSupply
+                                                     ? "⚠︎ \(supply) dose\(supply == 1 ? "" : "s") left — refill soon"
+                                                     : "\(supply) doses left")
+                                                    .font(.caption.weight(plan.isLowSupply ? .bold : .regular))
+                                                    .foregroundStyle(plan.isLowSupply ? TPColor.alert : TPColor.muted)
+                                            }
                                         }
                                     } icon: {
                                         Image(systemName: plan.type.careIcon)
@@ -170,6 +177,7 @@ struct PetsView: View {
                 CarePlanEditSheet(plan: plan)
                     .environmentObject(appState)
                     .environmentObject(notifications)
+                    .environmentObject(store)
             case .quickLog(let petId):
                 QuickLogSheet(initialPetId: petId).environmentObject(appState)
             case .paywall:

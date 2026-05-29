@@ -5,6 +5,7 @@ import SwiftUI
 struct CarePlanEditSheet: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var notifications: NotificationService
+    @EnvironmentObject private var store: SubscriptionStore
     @Environment(\.dismiss) private var dismiss
 
     let plan: CarePlan
@@ -15,6 +16,9 @@ struct CarePlanEditSheet: View {
     @State private var dueTime: Date
     @State private var specificDate: Date
     @State private var repeatRule: RepeatRule
+    @State private var trackSupply: Bool
+    @State private var supplyCount: Int
+    @State private var showPaywall = false
     @State private var validationMessage: String?
 
     init(plan: CarePlan) {
@@ -28,6 +32,8 @@ struct CarePlanEditSheet: View {
         _dueTime = State(initialValue: Calendar.current.date(from: comps) ?? Date())
         _specificDate = State(initialValue: plan.specificDate ?? Date())
         _repeatRule = State(initialValue: plan.repeatRule)
+        _trackSupply = State(initialValue: plan.supplyRemaining != nil)
+        _supplyCount = State(initialValue: plan.supplyRemaining ?? 30)
     }
 
     private var requiresSpecificDate: Bool { type == .vaccine || type == .visit }
@@ -59,6 +65,30 @@ struct CarePlanEditSheet: View {
                     repeatRule = (newType == .vaccine || newType == .visit) ? .onDate : .daily
                 }
 
+                if type == .medicine {
+                    Section("Refills") {
+                        if store.hasPlus {
+                            Toggle("Track supply & low-stock alerts", isOn: $trackSupply)
+                            if trackSupply {
+                                Stepper("Doses in supply: \(supplyCount)", value: $supplyCount, in: 1...3650)
+                                Text("Refilled? Set this back up. Warning shows at \(CarePlan.lowSupplyThreshold) or fewer.")
+                                    .font(.footnote).foregroundStyle(TPColor.muted)
+                            }
+                        } else {
+                            Button { showPaywall = true } label: {
+                                HStack {
+                                    Label("Track supply & refill alerts", systemImage: "pills.circle")
+                                    Spacer()
+                                    Text("Plus").font(.caption.weight(.semibold))
+                                        .padding(.horizontal, 8).padding(.vertical, 3)
+                                        .background(TPColor.primarySoft, in: Capsule())
+                                        .foregroundStyle(TPColor.primary)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if let validationMessage {
                     Section { Text(validationMessage).font(.footnote).foregroundStyle(TPColor.alert) }
                 }
@@ -82,6 +112,9 @@ struct CarePlanEditSheet: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView().environmentObject(store)
+            }
         }
     }
 
@@ -97,6 +130,7 @@ struct CarePlanEditSheet: View {
         updated.timeMinute = comps.minute ?? 0
         updated.repeatRule = repeatRule
         updated.specificDate = requiresSpecificDate ? specificDate : nil
+        updated.supplyRemaining = (type == .medicine && trackSupply && store.hasPlus) ? supplyCount : nil
 
         appState.updateCarePlan(updated)
 

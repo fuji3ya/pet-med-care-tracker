@@ -18,6 +18,8 @@ struct AddCareView: View {
     @State private var specificDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     @State private var repeatRule: RepeatRule = .daily
     @State private var selectedPetId: UUID?
+    @State private var trackSupply = false
+    @State private var supplyCount = 30
     @State private var validationMessage: String?
 
     private var requiresSpecificDate: Bool {
@@ -77,6 +79,34 @@ struct AddCareView: View {
                     repeatRule = .onDate
                 } else {
                     repeatRule = .daily
+                }
+            }
+
+            if type == .medicine {
+                Section("Refills") {
+                    if store.hasPlus {
+                        Toggle("Track supply & low-stock alerts", isOn: $trackSupply)
+                        if trackSupply {
+                            Stepper("Doses in supply: \(supplyCount)", value: $supplyCount, in: 1...3650)
+                            Text("Each time you mark this med done, supply drops by one. You'll see a refill warning at \(CarePlan.lowSupplyThreshold) or fewer left.")
+                                .font(.footnote)
+                                .foregroundStyle(TPColor.muted)
+                        }
+                    } else {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                Label("Track supply & refill alerts", systemImage: "pills.circle")
+                                Spacer()
+                                Text("Plus")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 8).padding(.vertical, 3)
+                                    .background(TPColor.primarySoft, in: Capsule())
+                                    .foregroundStyle(TPColor.primary)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -151,7 +181,7 @@ struct AddCareView: View {
         }
 
         let components = Calendar.current.dateComponents([.hour, .minute], from: dueTime)
-        let plan = CarePlan(
+        var plan = CarePlan(
             petId: pet.id,
             type: type,
             name: trimmedName,
@@ -161,6 +191,9 @@ struct AddCareView: View {
             repeatRule: repeatRule,
             specificDate: requiresSpecificDate ? specificDate : nil
         )
+        if type == .medicine && trackSupply && store.hasPlus {
+            plan.supplyRemaining = supplyCount
+        }
         appState.addCarePlan(plan)
         validationMessage = nil
 

@@ -82,6 +82,17 @@ struct CarePlan: Identifiable, Codable, Hashable {
     var specificDate: Date?
     var notificationEnabled = true
     var active = true
+    /// Doses left in the current supply (Plus refill tracking). nil = not tracked.
+    /// Decrements each time a medicine reminder is marked done; warns when low.
+    var supplyRemaining: Int?
+
+    /// Low-supply warning threshold (doses). Below or equal -> "refill soon".
+    static let lowSupplyThreshold = 3
+
+    var isLowSupply: Bool {
+        guard let supplyRemaining else { return false }
+        return supplyRemaining <= Self.lowSupplyThreshold
+    }
 
     func nextDueDate() -> Date {
         let calendar = Calendar.current

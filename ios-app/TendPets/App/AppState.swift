@@ -35,9 +35,10 @@ final class AppState: ObservableObject {
                       weightValue: 4.2, weightUnit: .kg, photoName: "demo-cat", isSample: true)
         pets = [cat]
 
-        let catMed = CarePlan(petId: cat.id, type: .medicine, name: "Heart med",
+        var catMed = CarePlan(petId: cat.id, type: .medicine, name: "Heart med",
                               detail: "1 tablet, after breakfast",
                               timeHour: 8, timeMinute: 0, repeatRule: .daily)
+        catMed.supplyRemaining = 4  // showcases Plus refill tracking on the sample
         let catWeight = CarePlan(petId: cat.id, type: .weight, name: "Weight check",
                                  detail: "Weigh on the kitchen scale",
                                  timeHour: 9, timeMinute: 0, repeatRule: .daily)
@@ -247,7 +248,22 @@ final class AppState: ObservableObject {
             value: plan.detail,
             note: "Completed by \(caregiver)"
         )
+        decrementSupply(forPlanId: occurrence.planId)
         save()
+    }
+
+    /// Decrement a medicine plan's tracked supply when a dose is given (Plus
+    /// refill tracking). No-op for plans that don't track supply.
+    func decrementSupply(forPlanId planId: UUID) {
+        guard let idx = carePlans.firstIndex(where: { $0.id == planId }),
+              carePlans[idx].type == .medicine,
+              let remaining = carePlans[idx].supplyRemaining else { return }
+        carePlans[idx].supplyRemaining = max(0, remaining - 1)
+    }
+
+    /// Active medicine plans that are running low on supply (Plus).
+    var lowSupplyPlans: [CarePlan] {
+        carePlans.filter { $0.active && $0.type == .medicine && $0.isLowSupply }
     }
 
     func markDone(planId: UUID) {
@@ -266,6 +282,7 @@ final class AppState: ObservableObject {
                 note: "Completed from notification reminder"
             )
         }
+        decrementSupply(forPlanId: planId)
         save()
     }
 
