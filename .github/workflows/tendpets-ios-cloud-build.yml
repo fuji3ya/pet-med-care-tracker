@@ -76,12 +76,23 @@ jobs:
   # Signed archive -> IPA -> TestFlight. Runs on manual dispatch and on push to main.
   signed-build:
     name: Signed Archive + TestFlight
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Select newest Xcode (iOS 26 SDK required by App Store)
+        run: |
+          set -euo pipefail
+          LATEST=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$LATEST" ]; then
+            LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          fi
+          echo "Using $LATEST"
+          sudo xcode-select -s "$LATEST/Contents/Developer"
+          xcodebuild -version
 
       - name: Install XcodeGen
         run: brew install xcodegen
