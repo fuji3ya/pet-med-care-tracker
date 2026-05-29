@@ -67,7 +67,7 @@ https://tendpets.starving-effort.com/terms
 
 Tend Pets is a reminder and record-keeping utility for pet owners. It does not diagnose, recommend medication dosage, replace veterinary care, or provide emergency guidance.
 
-The app uses local sample data on first launch (demo pets "Momo" the cat and "Rocky" the dog, with photos) so reviewers can immediately test Today, Add Care, Records, Settings, and the subscription paywall without needing to create data first. Reviewers can delete the demo pets via swipe-to-delete or Settings → Delete all pet data. StoreKit products are configured in `StoreKit/TendPets.storekit` for sandbox testing.
+The app uses one local SAMPLE pet on first launch ("Momo" the cat, badged "SAMPLE" in the UI, with photo, reminders, and history) so reviewers can immediately test Today, Add Care, Records, Settings, and the subscription paywall without creating data first. The sample does not count toward the free 1-pet limit and is automatically replaced the moment the user adds their own pet (no paywall to add a first pet). Reviewers can also swipe-to-delete it or use Settings → Delete all data. StoreKit products are configured in `StoreKit/TendPets.storekit` for sandbox testing.
 
 **Subscription gating** (verifiable in sandbox):
 - Free tier: 1 pet (PetsView shows "Free plan supports 1 pet" footer when limit hit), UNLIMITED reminders, ad-hoc weight/symptom/note logging, last 7 days of records (RecordsView shows "N older records hidden Plus" row), Vet Summary builder locked (RecordsView shows "Unlock with Plus" button), Export data locked (SettingsView shows "Plus" badge).

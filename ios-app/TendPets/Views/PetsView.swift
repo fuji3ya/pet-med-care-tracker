@@ -47,10 +47,22 @@ struct PetsView: View {
                             HStack(spacing: 12) {
                                 CareRingView(progress: progress(for: pet), initial: String(pet.name.prefix(1)), photoName: pet.photoName)
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(pet.name)
-                                        .font(.headline)
-                                        .foregroundStyle(TPColor.text)
-                                    Text("\(pet.ageText) — \(pet.weightText)")
+                                    HStack(spacing: 6) {
+                                        Text(pet.name)
+                                            .font(.headline)
+                                            .foregroundStyle(TPColor.text)
+                                        if pet.isSample {
+                                            Text("SAMPLE")
+                                                .font(.caption2.weight(.bold))
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(TPColor.primarySoft, in: Capsule())
+                                                .foregroundStyle(TPColor.primary)
+                                        }
+                                    }
+                                    Text(pet.isSample
+                                         ? "Sample pet — add your own to replace it"
+                                         : "\(pet.ageText) — \(pet.weightText)")
                                         .font(.subheadline)
                                         .foregroundStyle(TPColor.muted)
                                 }
@@ -153,7 +165,9 @@ struct PetsView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if !store.hasPlus && appState.pets.count >= AppState.freeMaxPets {
+            // Only nag once the user actually has a real pet at the free limit —
+            // a lone sample pet must not trigger the upgrade banner.
+            if !store.hasPlus && appState.realPetCount >= AppState.freeMaxPets {
                 HStack {
                     Image(systemName: "lock")
                     Text("Free plan supports 1 pet. Upgrade for unlimited pets.")
@@ -436,6 +450,8 @@ struct AddPetSheet: View {
             updated.weightValue = parsedWeight
             updated.weightUnit = weightUnit
             updated.photoName = savedPhotoName
+            // Editing the sample pet adopts it as a real pet.
+            updated.isSample = false
             appState.updatePet(updated)
         } else {
             let pet = Pet(

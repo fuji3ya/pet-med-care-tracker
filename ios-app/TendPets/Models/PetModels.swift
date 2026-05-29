@@ -30,6 +30,9 @@ struct Pet: Identifiable, Codable, Hashable {
     var weightUnit: WeightUnit = .kg
     var photoName: String?
     var archivedAt: Date?
+    /// True only for the first-launch sample pet. Sample pets do NOT count toward
+    /// the free 1-pet limit and are auto-removed when the user adds their own pet.
+    var isSample: Bool = false
 
     var ageText: String {
         guard let birthYear else { return species.rawValue }

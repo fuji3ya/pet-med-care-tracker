@@ -22,27 +22,23 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// First-launch sample data so the app never opens empty. Two pets (a cat and
-    /// a dog) with photos, a few realistic reminders, and some history make every
-    /// screen — Today, Pets, Records, and the vet summary — feel real. Users can
-    /// delete this from the Pets tab or wipe it in Settings.
+    /// First-launch SAMPLE data so the app never opens empty. ONE sample pet
+    /// (clearly badged "SAMPLE" in the UI) with photo, reminders, and history so
+    /// every screen feels real. The sample does NOT count toward the free 1-pet
+    /// limit and is auto-removed the moment the user adds their own pet, so a new
+    /// free user never hits a paywall just to add their first pet.
     private func seedDemoData() {
         let cat = Pet(name: "Momo", species: .cat, birthYear: 2014,
-                      weightValue: 4.2, weightUnit: .kg, photoName: "demo-cat")
-        let dog = Pet(name: "Rocky", species: .dog, birthYear: 2019,
-                      weightValue: 12.5, weightUnit: .kg, photoName: "demo-dog")
-        pets = [cat, dog]
+                      weightValue: 4.2, weightUnit: .kg, photoName: "demo-cat", isSample: true)
+        pets = [cat]
 
         let catMed = CarePlan(petId: cat.id, type: .medicine, name: "Heart med",
                               detail: "1 tablet, after breakfast",
                               timeHour: 8, timeMinute: 0, repeatRule: .daily)
-        let dogJoint = CarePlan(petId: dog.id, type: .medicine, name: "Joint supplement",
-                                detail: "1 chew with dinner",
-                                timeHour: 19, timeMinute: 0, repeatRule: .daily)
-        let dogMeal = CarePlan(petId: dog.id, type: .food, name: "Evening meal",
-                               detail: "1 cup dry food",
-                               timeHour: 18, timeMinute: 30, repeatRule: .daily)
-        carePlans = [catMed, dogJoint, dogMeal]
+        let catWeight = CarePlan(petId: cat.id, type: .weight, name: "Weight check",
+                                 detail: "Weigh on the kitchen scale",
+                                 timeHour: 9, timeMinute: 0, repeatRule: .daily)
+        carePlans = [catMed, catWeight]
 
         let cal = Calendar.current
         let now = Date()
@@ -50,21 +46,38 @@ final class AppState: ObservableObject {
         let laterToday = cal.date(byAdding: .hour, value: 3, to: now) ?? now
         occurrences = [
             CareOccurrence(planId: catMed.id, petId: cat.id, dueAt: eightToday, status: .due),
-            CareOccurrence(planId: dogMeal.id, petId: dog.id, dueAt: laterToday, status: .upcoming),
-            CareOccurrence(planId: dogJoint.id, petId: dog.id, dueAt: cal.date(bySettingHour: 19, minute: 0, second: 0, of: now) ?? now, status: .upcoming),
+            CareOccurrence(planId: catWeight.id, petId: cat.id, dueAt: laterToday, status: .upcoming),
         ]
 
         func daysAgo(_ d: Int) -> Date { cal.date(byAdding: .day, value: -d, to: now) ?? now }
         records = [
             CareRecord(petId: cat.id, type: .medicine, date: daysAgo(1),
                        title: "Heart med done", value: "1 tablet", note: "Completed by Caregiver"),
-            CareRecord(petId: dog.id, type: .weight, date: daysAgo(3),
-                       title: "Weight check", value: "12.5 kg", note: "Steady since last month"),
             CareRecord(petId: cat.id, type: .weight, date: daysAgo(12),
-                       title: "Weight check", value: "4.1 kg", note: "Slight loss — mention to vet"),
-            CareRecord(petId: dog.id, type: .vaccine, date: daysAgo(40),
+                       title: "Weight check", value: "4.3 kg", note: "Steady"),
+            CareRecord(petId: cat.id, type: .weight, date: daysAgo(3),
+                       title: "Weight check", value: "4.2 kg", note: "Slight loss — mention to vet"),
+            CareRecord(petId: cat.id, type: .vaccine, date: daysAgo(40),
                        title: "Rabies vaccine", value: "Lot 22-118", note: "Annual booster"),
         ]
+    }
+
+    /// Pets the user actually created (excludes the first-launch sample).
+    var realPetCount: Int {
+        pets.filter { !$0.isSample }.count
+    }
+
+    /// Remove every sample pet and its data. Called automatically when the user
+    /// adds their own pet, so the sample is seamlessly replaced.
+    private func removeSamplePets() {
+        for sample in pets.filter({ $0.isSample }) {
+            let planIds = carePlans.filter { $0.petId == sample.id }.map { $0.id }
+            carePlans.removeAll { $0.petId == sample.id }
+            occurrences.removeAll { $0.petId == sample.id }
+            records.removeAll { $0.petId == sample.id }
+            cancelNotifications(for: planIds)
+        }
+        pets.removeAll { $0.isSample }
     }
 
     var todaysOccurrences: [CareOccurrence] {
@@ -90,7 +103,9 @@ final class AppState: ObservableObject {
     static let freeRecordsHistoryDays = 7
 
     func canAddPet(hasPlus: Bool) -> Bool {
-        hasPlus || pets.count < Self.freeMaxPets
+        // Sample pets don't count — a new free user can always add their first
+        // real pet (the sample is replaced), never blocked by a paywall.
+        hasPlus || realPetCount < Self.freeMaxPets
     }
 
     /// Reminders are unlimited for everyone now. Kept as a method so call sites
@@ -110,6 +125,10 @@ final class AppState: ObservableObject {
     }
 
     func addPet(_ pet: Pet) {
+        // Adding a real pet replaces the first-launch sample(s).
+        if !pet.isSample {
+            removeSamplePets()
+        }
         pets.append(pet)
         save()
     }
