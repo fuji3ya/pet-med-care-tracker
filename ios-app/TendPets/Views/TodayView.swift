@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TodayView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var store: SubscriptionStore
     @State private var snoozeOccurrence: CareOccurrence?
     @State private var skipOccurrence: CareOccurrence?
     @State private var showSkipSheet = false
@@ -108,7 +109,7 @@ struct TodayView: View {
             }
         }
         .sheet(isPresented: $showQuickLog) {
-            QuickLogSheet().environmentObject(appState)
+            QuickLogSheet().environmentObject(appState).environmentObject(store)
         }
         .sheet(item: $snoozeOccurrence) { occurrence in
             SnoozeSheet(occurrence: occurrence)

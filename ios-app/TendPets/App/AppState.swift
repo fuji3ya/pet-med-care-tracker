@@ -159,8 +159,8 @@ final class AppState: ObservableObject {
     // MARK: - Ad-hoc logging (no reminder needed)
 
     /// Log a one-off record (weight, symptom, note) directly to history.
-    func logRecord(petId: UUID, type: RecordType, title: String, value: String?, note: String, date: Date = Date()) {
-        records.append(CareRecord(petId: petId, type: type, date: date, title: title, value: value, note: note))
+    func logRecord(petId: UUID, type: RecordType, title: String, value: String?, note: String, date: Date = Date(), attachmentName: String? = nil) {
+        records.append(CareRecord(petId: petId, type: type, date: date, title: title, value: value, note: note, attachmentName: attachmentName))
         save()
     }
 
@@ -182,8 +182,8 @@ final class AppState: ObservableObject {
         }
     }
 
-    func logSymptom(petId: UUID, name: String, severity: SymptomSeverity, note: String, date: Date = Date()) {
-        logRecord(petId: petId, type: .symptom, title: name, value: severity.rawValue, note: note, date: date)
+    func logSymptom(petId: UUID, name: String, severity: SymptomSeverity, note: String, date: Date = Date(), attachmentName: String? = nil) {
+        logRecord(petId: petId, type: .symptom, title: name, value: severity.rawValue, note: note, date: date, attachmentName: attachmentName)
     }
 
     /// Weight records for a pet, oldest-first, with a parsed numeric value (for charts).

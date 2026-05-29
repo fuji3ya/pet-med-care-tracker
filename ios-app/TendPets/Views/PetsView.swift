@@ -179,7 +179,9 @@ struct PetsView: View {
                     .environmentObject(notifications)
                     .environmentObject(store)
             case .quickLog(let petId):
-                QuickLogSheet(initialPetId: petId).environmentObject(appState)
+                QuickLogSheet(initialPetId: petId)
+                    .environmentObject(appState)
+                    .environmentObject(store)
             case .paywall:
                 PaywallView().environmentObject(store)
             }

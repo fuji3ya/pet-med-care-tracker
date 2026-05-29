@@ -1,10 +1,13 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 /// Ad-hoc logging: record a one-off weight, symptom, or note without first
 /// creating a reminder. This is what makes weight tracking real — each entry is
 /// a fresh measured value with its own date.
 struct QuickLogSheet: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var store: SubscriptionStore
     @Environment(\.dismiss) private var dismiss
 
     enum LogKind: String, CaseIterable, Identifiable {
@@ -30,6 +33,10 @@ struct QuickLogSheet: View {
 
     // Note / shared
     @State private var noteText = ""
+    // Attachment (Plus "vet binder")
+    @State private var photoItem: PhotosPickerItem?
+    @State private var photoData: Data?
+    @State private var showPaywall = false
     @State private var validationMessage: String?
 
     var body: some View {
@@ -80,6 +87,41 @@ struct QuickLogSheet: View {
                     }
                 }
 
+                if kind != .weight {
+                    Section("Attachment") {
+                        if store.hasPlus {
+                            if let photoData, let uiImage = UIImage(data: photoData) {
+                                Image(uiImage: uiImage)
+                                    .resizable().scaledToFit()
+                                    .frame(maxHeight: 160)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            HStack {
+                                PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+                                    Label(photoData == nil ? "Attach photo or document" : "Change attachment", systemImage: "paperclip")
+                                        .foregroundStyle(TPColor.primary)
+                                }
+                                if photoData != nil {
+                                    Spacer()
+                                    Button("Remove") { photoData = nil; photoItem = nil }
+                                        .foregroundStyle(TPColor.muted)
+                                }
+                            }
+                        } else {
+                            Button { showPaywall = true } label: {
+                                HStack {
+                                    Label("Attach photo / vaccine cert (vet binder)", systemImage: "paperclip")
+                                    Spacer()
+                                    Text("Plus").font(.caption.weight(.semibold))
+                                        .padding(.horizontal, 8).padding(.vertical, 3)
+                                        .background(TPColor.primarySoft, in: Capsule())
+                                        .foregroundStyle(TPColor.primary)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if let validationMessage {
                     Section {
                         Text(validationMessage)
@@ -104,6 +146,17 @@ struct QuickLogSheet: View {
                 petId = petId ?? initialPetId ?? appState.pets.first?.id
                 weightUnit = appState.pets.first(where: { $0.id == petId })?.weightUnit ?? .kg
             }
+            .onChange(of: photoItem) { _, newItem in
+                guard let newItem else { return }
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self) {
+                        photoData = data
+                    }
+                }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView().environmentObject(store)
+            }
         }
     }
 
@@ -118,6 +171,8 @@ struct QuickLogSheet: View {
 
     private func save() {
         guard let petId else { return }
+        // Persist any attached photo/document (Plus only).
+        let attachment: String? = (store.hasPlus ? photoData.flatMap { PetImageStore.save($0) } : nil)
         switch kind {
         case .weight:
             guard let v = Double(weightValue.trimmingCharacters(in: .whitespaces)), v > 0 else {
@@ -128,10 +183,10 @@ struct QuickLogSheet: View {
         case .symptom:
             let name = String(symptomName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80))
             appState.logSymptom(petId: petId, name: name, severity: severity,
-                                note: String(noteText.prefix(300)), date: date)
+                                note: String(noteText.prefix(300)), date: date, attachmentName: attachment)
         case .note:
             let text = String(noteText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300))
-            appState.logRecord(petId: petId, type: .note, title: "Note", value: nil, note: text, date: date)
+            appState.logRecord(petId: petId, type: .note, title: "Note", value: nil, note: text, date: date, attachmentName: attachment)
         }
         dismiss()
     }

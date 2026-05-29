@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct RecordsView: View {
     @EnvironmentObject private var appState: AppState
@@ -70,9 +71,16 @@ struct RecordsView: View {
                                 Text(record.date.formatted(date: .abbreviated, time: .omitted))
                                     .font(.caption)
                                     .foregroundStyle(TPColor.muted)
+                                if let img = PetImageStore.image(named: record.attachmentName) {
+                                    Image(uiImage: img)
+                                        .resizable().scaledToFill()
+                                        .frame(maxWidth: .infinity, maxHeight: 140)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .padding(.top, 4)
+                                }
                             }
                         } icon: {
-                            Image(systemName: record.type.systemImage)
+                            Image(systemName: record.attachmentName != nil ? "paperclip" : record.type.systemImage)
                         }
                     }
                 }

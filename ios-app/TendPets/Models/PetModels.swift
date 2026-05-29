@@ -157,6 +157,9 @@ struct CareRecord: Identifiable, Codable, Hashable {
     var title: String
     var value: String?
     var note: String
+    /// Filename in Documents of an attached photo/document (Plus "vet binder":
+    /// vaccine certs, lab results, symptom photos). nil = no attachment.
+    var attachmentName: String?
 
     /// Parse a leading numeric value out of `value` (e.g. "4.2 kg" -> 4.2).
     /// Used to build the weight trend chart from weight records.
