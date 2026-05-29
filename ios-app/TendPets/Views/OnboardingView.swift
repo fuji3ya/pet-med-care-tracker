@@ -148,7 +148,7 @@ struct OnboardingView: View {
     private var topBar: some View {
         HStack {
             HStack(spacing: 10) {
-                CareRingView(progress: 0.82, initial: "M")
+                CareRingView(progress: 0.82, initial: "M", photoName: "demo-cat")
                     .frame(width: 38, height: 38)
                 Text("Tend Pets")
                     .font(.headline.weight(.bold))

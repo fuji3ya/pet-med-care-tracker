@@ -32,7 +32,7 @@
           "introductoryOffer": {
             "internalID": "plus_monthly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P3W"
+            "subscriptionPeriod": "P1M"
           },
           "localizations": [
             {
@@ -57,7 +57,7 @@
           "introductoryOffer": {
             "internalID": "plus_yearly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P3W"
+            "subscriptionPeriod": "P1M"
           },
           "localizations": [
             {
@@ -82,7 +82,7 @@
           "introductoryOffer": {
             "internalID": "family_monthly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P3W"
+            "subscriptionPeriod": "P1M"
           },
           "localizations": [
             {
@@ -107,7 +107,7 @@
           "introductoryOffer": {
             "internalID": "family_yearly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P3W"
+            "subscriptionPeriod": "P1M"
           },
           "localizations": [
             {

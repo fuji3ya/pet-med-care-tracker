@@ -11,7 +11,7 @@ struct TodayView: View {
             if let pet = appState.pets.first {
                 Section {
                     HStack(spacing: 12) {
-                        CareRingView(progress: todayProgress, initial: String(pet.name.prefix(1)))
+                        CareRingView(progress: todayProgress, initial: String(pet.name.prefix(1)), photoName: pet.photoName)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(pet.name)
                                 .font(.headline)

@@ -36,7 +36,7 @@ Tend Pets Plus (subscription) adds:
 
 Tend Pets does not provide veterinary medical advice, diagnosis, dosage recommendations, treatment recommendations, or emergency guidance. It is a reminder and record-keeping tool only. Always follow your veterinarian's instructions.
 
-Tend Pets Plus is an auto-renewing subscription. Plus Monthly is $4.99 per month and Plus Yearly is $35.99 per year (Family tiers also available). Each plan starts with a 3-week free trial. Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription any time in your Apple ID account settings after purchase. See the Terms of Use and Privacy Policy linked in the app and on the support site.
+Tend Pets Plus is an auto-renewing subscription. Plus Monthly is $4.99 per month and Plus Yearly is $35.99 per year (Family tiers also available). Each plan starts with a 1-month free trial. Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription any time in your Apple ID account settings after purchase. See the Terms of Use and Privacy Policy linked in the app and on the support site.
 
 ## Keywords
 
@@ -79,10 +79,10 @@ The app uses local sample data on first launch (one demo pet "Momo") so reviewer
 
 | Product ID | Display | Price (USD) | Period | Trial |
 |---|---|---|---|---|
-| `tendpets.plus.monthly` | Plus Monthly | $4.99 | 1 month | 3 weeks free |
-| `tendpets.plus.yearly` | Plus Yearly | $35.99 | 1 year | 3 weeks free |
-| `tendpets.family.monthly` | Family Monthly | $6.99 | 1 month | 3 weeks free |
-| `tendpets.family.yearly` | Family Yearly | $49.99 | 1 year | 3 weeks free |
+| `tendpets.plus.monthly` | Plus Monthly | $4.99 | 1 month | 1 month free |
+| `tendpets.plus.yearly` | Plus Yearly | $35.99 | 1 year | 1 month free |
+| `tendpets.family.monthly` | Family Monthly | $6.99 | 1 month | 1 month free |
+| `tendpets.family.yearly` | Family Yearly | $49.99 | 1 year | 1 month free |
 
 **Subscription group**: `Tend Pets` (single group, products are upgrade/downgrade exchangeable).
 

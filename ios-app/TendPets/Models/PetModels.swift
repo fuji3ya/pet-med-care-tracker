@@ -73,14 +73,11 @@ struct CarePlan: Identifiable, Codable, Hashable {
     var timeHour: Int
     var timeMinute: Int
     var repeatRule: RepeatRule
-    var startDate = Date()
     /// Used when `repeatRule == .onDate` — fires once on this calendar date at
     /// (timeHour, timeMinute). Required for vaccine / vet visit reminders that
     /// are typically scheduled weeks or months in the future.
     var specificDate: Date?
-    var endDate: Date?
     var notificationEnabled = true
-    var assignedUserName: String?
     var active = true
 
     func nextDueDate() -> Date {

@@ -108,7 +108,7 @@ required disclosures:
 
 1. Subscription length (1 month / 1 year) — shown in product row
 2. Subscription price — shown in product row (e.g., $4.99)
-3. Free trial (3 weeks) — shown as "Start with 3 weeks free. Cancel anytime."
+3. Free trial (1 month) — shown as "Start with 1 month free. Cancel anytime."
 4. Auto-renewal terms — full paragraph below product buttons
 5. Cancellation instructions — "Manage or cancel in your Apple ID account settings"
 6. Terms of Use link — opens https://tendpets.starving-effort.com/terms in Safari

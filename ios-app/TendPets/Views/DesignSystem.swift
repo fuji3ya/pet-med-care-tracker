@@ -1,4 +1,40 @@
 import SwiftUI
+import UIKit
+
+/// Resolves a `Pet.photoName` to a real image. Demo pets reference a bundled
+/// asset-catalog name (e.g. "demo-cat"); user-added pets reference a file saved
+/// in the app's Documents directory. Returns nil when no photo is set.
+enum PetImageStore {
+    private static var documentsDirectory: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+
+    static func image(named photoName: String?) -> UIImage? {
+        guard let photoName, !photoName.isEmpty else { return nil }
+        if let bundled = UIImage(named: photoName) { return bundled }
+        let fileURL = documentsDirectory.appendingPathComponent(photoName)
+        if let data = try? Data(contentsOf: fileURL) {
+            return UIImage(data: data)
+        }
+        return nil
+    }
+
+    /// Persist user-picked image data as a JPEG in Documents, returning the
+    /// filename to store in `Pet.photoName`. Returns nil on failure.
+    @discardableResult
+    static func save(_ data: Data) -> String? {
+        guard let image = UIImage(data: data),
+              let jpeg = image.jpegData(compressionQuality: 0.8) else { return nil }
+        let filename = "pet-\(UUID().uuidString).jpg"
+        let url = documentsDirectory.appendingPathComponent(filename)
+        do {
+            try jpeg.write(to: url, options: .atomic)
+            return filename
+        } catch {
+            return nil
+        }
+    }
+}
 
 enum TPColor {
     static let background = Color(red: 0.980, green: 0.976, blue: 0.965)
@@ -28,6 +64,7 @@ extension CareType {
 struct CareRingView: View {
     var progress: Double
     var initial: String
+    var photoName: String? = nil
     var tint: Color = TPColor.primary
 
     var body: some View {
@@ -38,12 +75,21 @@ struct CareRingView: View {
                 .trim(from: 0, to: progress)
                 .stroke(tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-            Circle()
-                .fill(LinearGradient(colors: [.brown.opacity(0.75), .brown], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .padding(6)
-            Text(initial)
-                .font(.headline.weight(.bold))
-                .foregroundStyle(.white)
+
+            if let uiImage = PetImageStore.image(named: photoName) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 42, height: 42)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(LinearGradient(colors: [tint.opacity(0.75), tint], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .padding(6)
+                Text(initial)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+            }
         }
         .frame(width: 54, height: 54)
         .accessibilityLabel("Care progress \(Int(progress * 100)) percent")

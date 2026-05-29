@@ -180,7 +180,7 @@ struct PaywallView: View {
                     }
                     .font(.headline)
 
-                    Text("Start with 3 weeks free. Cancel anytime.")
+                    Text("Start with 1 month free. Cancel anytime.")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(TPColor.primary)
 
@@ -226,7 +226,7 @@ struct PaywallView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Subscription terms")
                             .font(.footnote.weight(.bold))
-                        Text("Tend Pets Plus and Family are auto-renewing subscriptions. After the 3-week free trial, payment is charged to your Apple ID account at the displayed price. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. Subscriptions can be managed and auto-renewal turned off in your Apple ID account settings after purchase.")
+                        Text("Tend Pets Plus and Family are auto-renewing subscriptions. After the 1-month free trial, payment is charged to your Apple ID account at the displayed price. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. Subscriptions can be managed and auto-renewal turned off in your Apple ID account settings after purchase.")
                         Text("Tend Pets helps organize reminders and records. It does not provide veterinary medical advice.")
 
                         HStack(spacing: 16) {

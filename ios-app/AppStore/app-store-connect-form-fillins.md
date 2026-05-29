@@ -74,10 +74,10 @@ English (U.S.)
 
 | Product ID | Display Name | Reference Name | Price | Period | Trial |
 |---|---|---|---|---|---|
-| `tendpets.plus.monthly` | Plus Monthly | Plus Monthly | $4.99 | 1 month | 3 weeks free |
-| `tendpets.plus.yearly` | Plus Yearly | Plus Yearly | $35.99 | 1 year | 3 weeks free |
-| `tendpets.family.monthly` | Family Monthly | Family Monthly | $6.99 | 1 month | 3 weeks free |
-| `tendpets.family.yearly` | Family Yearly | Family Yearly | $49.99 | 1 year | 3 weeks free |
+| `tendpets.plus.monthly` | Plus Monthly | Plus Monthly | $4.99 | 1 month | 1 month free |
+| `tendpets.plus.yearly` | Plus Yearly | Plus Yearly | $35.99 | 1 year | 1 month free |
+| `tendpets.family.monthly` | Family Monthly | Family Monthly | $6.99 | 1 month | 1 month free |
+| `tendpets.family.yearly` | Family Yearly | Family Yearly | $49.99 | 1 year | 1 month free |
 
 各 product の localization (en-US):
 

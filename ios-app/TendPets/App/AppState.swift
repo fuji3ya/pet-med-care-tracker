@@ -18,22 +18,53 @@ final class AppState: ObservableObject {
         records = snapshot.records
 
         if pets.isEmpty {
-            let sample = Pet(name: "Momo", species: .cat, birthYear: 2014, weightValue: 4.2, weightUnit: .kg)
-            pets = [sample]
-            let plan = CarePlan(
-                petId: sample.id,
-                type: .medicine,
-                name: "Heart med",
-                detail: "1 tablet, after breakfast",
-                timeHour: 8,
-                timeMinute: 0,
-                repeatRule: .daily
-            )
-            carePlans = [plan]
-            occurrences = [
-                CareOccurrence(planId: plan.id, petId: sample.id, dueAt: Date(), status: .due)
-            ]
+            seedDemoData()
         }
+    }
+
+    /// First-launch sample data so the app never opens empty. Two pets (a cat and
+    /// a dog) with photos, a few realistic reminders, and some history make every
+    /// screen — Today, Pets, Records, and the vet summary — feel real. Users can
+    /// delete this from the Pets tab or wipe it in Settings.
+    private func seedDemoData() {
+        let cat = Pet(name: "Momo", species: .cat, birthYear: 2014,
+                      weightValue: 4.2, weightUnit: .kg, photoName: "demo-cat")
+        let dog = Pet(name: "Rocky", species: .dog, birthYear: 2019,
+                      weightValue: 12.5, weightUnit: .kg, photoName: "demo-dog")
+        pets = [cat, dog]
+
+        let catMed = CarePlan(petId: cat.id, type: .medicine, name: "Heart med",
+                              detail: "1 tablet, after breakfast",
+                              timeHour: 8, timeMinute: 0, repeatRule: .daily)
+        let dogJoint = CarePlan(petId: dog.id, type: .medicine, name: "Joint supplement",
+                                detail: "1 chew with dinner",
+                                timeHour: 19, timeMinute: 0, repeatRule: .daily)
+        let dogMeal = CarePlan(petId: dog.id, type: .food, name: "Evening meal",
+                               detail: "1 cup dry food",
+                               timeHour: 18, timeMinute: 30, repeatRule: .daily)
+        carePlans = [catMed, dogJoint, dogMeal]
+
+        let cal = Calendar.current
+        let now = Date()
+        let eightToday = cal.date(bySettingHour: 8, minute: 0, second: 0, of: now) ?? now
+        let laterToday = cal.date(byAdding: .hour, value: 3, to: now) ?? now
+        occurrences = [
+            CareOccurrence(planId: catMed.id, petId: cat.id, dueAt: eightToday, status: .due),
+            CareOccurrence(planId: dogMeal.id, petId: dog.id, dueAt: laterToday, status: .upcoming),
+            CareOccurrence(planId: dogJoint.id, petId: dog.id, dueAt: cal.date(bySettingHour: 19, minute: 0, second: 0, of: now) ?? now, status: .upcoming),
+        ]
+
+        func daysAgo(_ d: Int) -> Date { cal.date(byAdding: .day, value: -d, to: now) ?? now }
+        records = [
+            CareRecord(petId: cat.id, type: .medicine, date: daysAgo(1),
+                       title: "Heart med done", value: "1 tablet", note: "Completed by Caregiver"),
+            CareRecord(petId: dog.id, type: .weight, date: daysAgo(3),
+                       title: "Weight check", value: "12.5 kg", note: "Steady since last month"),
+            CareRecord(petId: cat.id, type: .weight, date: daysAgo(12),
+                       title: "Weight check", value: "4.1 kg", note: "Slight loss — mention to vet"),
+            CareRecord(petId: dog.id, type: .vaccine, date: daysAgo(40),
+                       title: "Rabies vaccine", value: "Lot 22-118", note: "Annual booster"),
+        ]
     }
 
     var todaysOccurrences: [CareOccurrence] {

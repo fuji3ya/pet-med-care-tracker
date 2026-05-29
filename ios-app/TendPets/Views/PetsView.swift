@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 struct PetsView: View {
     @EnvironmentObject private var appState: AppState
@@ -22,7 +24,7 @@ struct PetsView: View {
                 ForEach(appState.pets) { pet in
                     Section {
                         HStack(spacing: 12) {
-                            CareRingView(progress: progress(for: pet), initial: String(pet.name.prefix(1)))
+                            CareRingView(progress: progress(for: pet), initial: String(pet.name.prefix(1)), photoName: pet.photoName)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(pet.name)
                                     .font(.headline)
@@ -155,6 +157,8 @@ struct AddPetSheet: View {
     @State private var birthYear = Calendar(identifier: .gregorian).component(.year, from: Date()) - 3
     @State private var weightValue = ""
     @State private var weightUnit: WeightUnit = AddPetSheet.defaultWeightUnit
+    @State private var photoItem: PhotosPickerItem?
+    @State private var photoData: Data?
     @State private var validationMessage: String?
 
     /// Default unit based on the user's measurement system. US users default to lb,
@@ -169,6 +173,47 @@ struct AddPetSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            if let photoData, let uiImage = UIImage(data: photoData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 64, height: 64)
+                                    .clipShape(Circle())
+                            } else {
+                                Circle()
+                                    .fill(TPColor.primarySoft)
+                                    .frame(width: 64, height: 64)
+                                    .overlay(
+                                        Image(systemName: "pawprint.fill")
+                                            .foregroundStyle(TPColor.primary)
+                                    )
+                            }
+                        }
+                        PhotosPicker(
+                            selection: $photoItem,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            Text(photoData == nil ? "Add photo" : "Change photo")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(TPColor.primary)
+                        }
+                        if photoData != nil {
+                            Spacer()
+                            Button("Remove") {
+                                photoData = nil
+                                photoItem = nil
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(TPColor.muted)
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                }
+
                 Section("About this pet") {
                     TextField("Name", text: $name)
                         .textContentType(.name)
@@ -218,6 +263,14 @@ struct AddPetSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                }
+            }
+            .onChange(of: photoItem) { _, newItem in
+                guard let newItem else { return }
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self) {
+                        photoData = data
+                    }
                 }
             }
         }
@@ -270,12 +323,15 @@ struct AddPetSheet: View {
             parsedWeight = value
         }
 
+        let savedPhotoName = photoData.flatMap { PetImageStore.save($0) }
+
         let pet = Pet(
             name: cappedName,
             species: species,
             birthYear: birthYear,
             weightValue: parsedWeight,
-            weightUnit: weightUnit
+            weightUnit: weightUnit,
+            photoName: savedPhotoName
         )
         appState.addPet(pet)
         dismiss()
