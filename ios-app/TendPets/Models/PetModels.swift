@@ -33,8 +33,12 @@ struct Pet: Identifiable, Codable, Hashable {
 
     var ageText: String {
         guard let birthYear else { return species.rawValue }
-        let year = Calendar.current.component(.year, from: Date())
-        return "\(species.rawValue) - \(max(year - birthYear, 0)) years"
+        // Force Gregorian calendar so age stays correct for users whose device
+        // locale uses Buddhist (Thai), Hijri (Saudi), or other non-Gregorian
+        // calendars. birthYear is stored as a Gregorian year value.
+        let year = Calendar(identifier: .gregorian).component(.year, from: Date())
+        let age = max(year - birthYear, 0)
+        return "\(species.rawValue) — \(age) year\(age == 1 ? "" : "s")"
     }
 
     var weightText: String {
@@ -55,9 +59,7 @@ enum CareType: String, Codable, CaseIterable, Identifiable {
 
 enum RepeatRule: String, Codable, CaseIterable, Identifiable {
     case daily = "Daily"
-    case weekly = "Weekly"
-    case everyXDays = "Every X days"
-    case custom = "Custom"
+    case onDate = "On the chosen date"
 
     var id: String { rawValue }
 }
@@ -72,16 +74,29 @@ struct CarePlan: Identifiable, Codable, Hashable {
     var timeMinute: Int
     var repeatRule: RepeatRule
     var startDate = Date()
+    /// Used when `repeatRule == .onDate` — fires once on this calendar date at
+    /// (timeHour, timeMinute). Required for vaccine / vet visit reminders that
+    /// are typically scheduled weeks or months in the future.
+    var specificDate: Date?
     var endDate: Date?
     var notificationEnabled = true
     var assignedUserName: String?
     var active = true
 
     func nextDueDate() -> Date {
-        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        let calendar = Calendar.current
+        let baseDate: Date = {
+            switch repeatRule {
+            case .daily:
+                return Date()
+            case .onDate:
+                return specificDate ?? Date()
+            }
+        }()
+        var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
         components.hour = timeHour
         components.minute = timeMinute
-        return Calendar.current.date(from: components) ?? Date()
+        return calendar.date(from: components) ?? baseDate
     }
 }
 

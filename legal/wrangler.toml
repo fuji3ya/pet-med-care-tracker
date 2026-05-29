@@ -1,0 +1,19 @@
+# Cloudflare Pages project config — Tend Pets legal site
+# Deploy with: npx wrangler pages deploy . --project-name=tendpets-legal --branch=main
+#
+# Default Pages URLs after deploy:
+#   https://tendpets.starving-effort.com/         → index.html
+#   https://tendpets.starving-effort.com/privacy  → privacy.html (via _redirects)
+#   https://tendpets.starving-effort.com/terms    → terms.html (via _redirects)
+#   https://tendpets.starving-effort.com/support  → support.html (via _redirects)
+#
+# Optional custom domain (set in Cloudflare dashboard later):
+#   starvingeffort.app/tendpets/*  → this Pages project root
+#   tendpets.app/*                 → this Pages project root (if domain acquired)
+
+name = "tendpets-legal"
+compatibility_date = "2026-05-25"
+pages_build_output_dir = "."
+
+[env.production]
+# No environment variables required — purely static site.

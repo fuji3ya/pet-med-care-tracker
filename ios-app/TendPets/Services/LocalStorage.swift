@@ -12,6 +12,8 @@ struct AppSnapshot: Codable {
 final class LocalStorage {
     private let key = "tendpets.snapshot.v1"
 
+    private let corruptedBackupKey = "tendpets.snapshot.v1.corrupted-backup"
+
     func load() -> AppSnapshot {
         guard let data = UserDefaults.standard.data(forKey: key) else {
             return .empty
@@ -20,6 +22,10 @@ final class LocalStorage {
         do {
             return try JSONDecoder().decode(AppSnapshot.self, from: data)
         } catch {
+            // Preserve the corrupted blob so the user (or support) can recover
+            // it manually instead of silently losing all care history on a
+            // schema mismatch or partial write.
+            UserDefaults.standard.set(data, forKey: corruptedBackupKey)
             return .empty
         }
     }

@@ -34,7 +34,7 @@ Why this route:
 
 ## Required Apple Values
 
-- Bundle ID: `com.tendpets.app`
+- Bundle ID: `app.starvingeffort.tendpets`
 - App Store Apple ID: numeric ID from App Store Connect > App Information.
 - App Store Connect API key:
   - Key ID
@@ -42,7 +42,7 @@ Why this route:
   - `.p8` private key, downloadable once
   - Access: App Manager
 - Apple Distribution certificate.
-- App Store provisioning profile for `com.tendpets.app`.
+- App Store provisioning profile for `app.starvingeffort.tendpets`.
 
 ## Repository Files Added
 
@@ -57,9 +57,9 @@ Why this route:
 2. In Codemagic, add the repository as an application.
 3. Add an App Store Connect API key in Team settings > Developer Portal > Manage keys.
 4. Name the integration `codemagic` or update `codemagic.yaml` to match the integration name.
-5. Add or fetch signing files for `com.tendpets.app`:
+5. Add or fetch signing files for `app.starvingeffort.tendpets`:
    - distribution type: `app_store`
-   - bundle identifier: `com.tendpets.app`
+   - bundle identifier: `app.starvingeffort.tendpets`
 6. Replace `REPLACE_WITH_APP_STORE_APPLE_ID` in `codemagic.yaml`.
 7. Run `ios-testflight`.
 8. Confirm the build appears in App Store Connect > TestFlight after Apple processing.
@@ -111,7 +111,7 @@ Cost-control rule:
 ## Known Risks
 
 - The first Codemagic run may fail on signing until the App Store Connect API key, distribution certificate, and provisioning profile are aligned.
-- Apple may reject `com.tendpets.app` if the bundle identifier is unavailable; update both `project.yml` and `codemagic.yaml` together.
+- Apple may reject `app.starvingeffort.tendpets` if the bundle identifier is unavailable; update both `project.yml` and `codemagic.yaml` together.
 - App Store release automation cannot replace human review of screenshots, privacy answers, subscription setup, and medical-safety wording.
 - GitHub-hosted macOS images change over time; the workflow logs Xcode and simulator availability for traceability.
 

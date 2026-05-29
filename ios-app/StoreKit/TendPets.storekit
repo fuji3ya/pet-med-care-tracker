@@ -32,7 +32,7 @@
           "introductoryOffer": {
             "internalID": "plus_monthly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P1W"
+            "subscriptionPeriod": "P3W"
           },
           "localizations": [
             {
@@ -50,14 +50,14 @@
         {
           "adHocOffers": [],
           "codeOffers": [],
-          "displayPrice": "39.99",
+          "displayPrice": "35.99",
           "familyShareable": false,
           "groupNumber": 1,
           "internalID": "plus_yearly",
           "introductoryOffer": {
             "internalID": "plus_yearly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P1W"
+            "subscriptionPeriod": "P3W"
           },
           "localizations": [
             {
@@ -75,14 +75,14 @@
         {
           "adHocOffers": [],
           "codeOffers": [],
-          "displayPrice": "8.99",
+          "displayPrice": "6.99",
           "familyShareable": true,
           "groupNumber": 1,
           "internalID": "family_monthly",
           "introductoryOffer": {
             "internalID": "family_monthly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P1W"
+            "subscriptionPeriod": "P3W"
           },
           "localizations": [
             {
@@ -100,14 +100,14 @@
         {
           "adHocOffers": [],
           "codeOffers": [],
-          "displayPrice": "69.99",
+          "displayPrice": "49.99",
           "familyShareable": true,
           "groupNumber": 1,
           "internalID": "family_yearly",
           "introductoryOffer": {
             "internalID": "family_yearly_trial",
             "paymentMode": "free",
-            "subscriptionPeriod": "P1W"
+            "subscriptionPeriod": "P3W"
           },
           "localizations": [
             {

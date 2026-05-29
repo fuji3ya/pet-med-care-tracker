@@ -1,0 +1,9 @@
+# Cloudflare Pages redirects
+# Apple Reviewer / ASC metadata で参照する URL を安定化させる
+#
+# NOTE: Cloudflare Pages auto-clean-URL feature already serves /privacy from
+# /privacy.html automatically (308). Adding an explicit /privacy → /privacy.html
+# rewrite here would create an INFINITE REDIRECT LOOP with that auto-feature.
+# (Confirmed gotcha: line-i-app-infra-blueprint.md §Cloudflare Pages gotchas.)
+#
+# Leave this file empty (header only) unless we need backward-compat redirects.

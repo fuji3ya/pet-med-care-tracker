@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 @MainActor
 final class AppState: ObservableObject {
@@ -47,19 +48,85 @@ final class AppState: ObservableObject {
         carePlans.first { $0.id == id }
     }
 
+    // MARK: - Free tier limits
+
+    static let freeMaxPets = 1
+    static let freeMaxActiveCarePlans = 3
+    static let freeRecordsHistoryDays = 7
+
+    func canAddPet(hasPlus: Bool) -> Bool {
+        hasPlus || pets.count < Self.freeMaxPets
+    }
+
+    func canAddCarePlan(hasPlus: Bool) -> Bool {
+        hasPlus || activeCarePlanCount < Self.freeMaxActiveCarePlans
+    }
+
+    var activeCarePlanCount: Int {
+        carePlans.filter { $0.active }.count
+    }
+
+    func recordsVisibleToUser(hasPlus: Bool) -> [CareRecord] {
+        if hasPlus { return records }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -Self.freeRecordsHistoryDays, to: Date()) ?? Date.distantPast
+        return records.filter { $0.date >= cutoff }
+    }
+
+    func addPet(_ pet: Pet) {
+        pets.append(pet)
+        save()
+    }
+
+    /// Delete a pet and all its care plans, occurrences, records, and pending
+    /// notifications. This is the safe entry point for "remove a pet"; it
+    /// guarantees no orphan notifications continue to fire for a pet the user
+    /// no longer tracks.
+    func deletePet(_ petId: UUID) {
+        let affectedPlanIds = carePlans.filter { $0.petId == petId }.map { $0.id }
+        pets.removeAll { $0.id == petId }
+        carePlans.removeAll { $0.petId == petId }
+        occurrences.removeAll { $0.petId == petId }
+        records.removeAll { $0.petId == petId }
+        cancelNotifications(for: affectedPlanIds)
+        save()
+    }
+
+    /// Delete a single care plan and its pending notifications + occurrences.
+    func deleteCarePlan(_ planId: UUID) {
+        carePlans.removeAll { $0.id == planId }
+        occurrences.removeAll { $0.planId == planId }
+        cancelNotifications(for: [planId])
+        save()
+    }
+
+    private func cancelNotifications(for planIds: [UUID]) {
+        // Direct UNUserNotificationCenter access keeps AppState free of a hard
+        // dependency on NotificationService while still preventing orphan
+        // reminders after delete.
+        let center = UNUserNotificationCenter.current()
+        let identifiers = planIds.flatMap { id in
+            [id.uuidString, "\(id.uuidString).snooze"]
+        }
+        if !identifiers.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: identifiers)
+            center.removeDeliveredNotifications(withIdentifiers: identifiers)
+        }
+    }
+
     func markDone(_ occurrence: CareOccurrence) {
         guard let plan = plan(for: occurrence.planId) else { return }
+        let caregiver = currentCaregiverName
         updateOccurrence(occurrence.id) { item in
             item.status = .done
             item.completedAt = Date()
-            item.completedBy = "Alex"
+            item.completedBy = caregiver
         }
         appendRecord(
             petId: occurrence.petId,
             type: plan.type.recordType,
             title: "\(plan.name) done",
             value: plan.detail,
-            note: "Completed by Alex"
+            note: "Completed by \(caregiver)"
         )
         save()
     }
@@ -70,14 +137,14 @@ final class AppState: ObservableObject {
         let plan = self.plan(for: planId)
         occurrences[index].status = .done
         occurrences[index].completedAt = Date()
-        occurrences[index].completedBy = "Notification"
+        occurrences[index].completedBy = currentCaregiverName
         if let plan {
             appendRecord(
                 petId: occurrence.petId,
                 type: plan.type.recordType,
                 title: "\(plan.name) done",
                 value: plan.detail,
-                note: "Completed from notification"
+                note: "Completed from notification reminder"
             )
         }
         save()
@@ -102,20 +169,27 @@ final class AppState: ObservableObject {
 
     func skip(_ occurrence: CareOccurrence, reason: String) {
         guard let plan = plan(for: occurrence.planId) else { return }
+        let caregiver = currentCaregiverName
         updateOccurrence(occurrence.id) { item in
             item.status = .skipped
             item.skipReason = reason
             item.completedAt = Date()
-            item.completedBy = "Alex"
+            item.completedBy = caregiver
         }
         appendRecord(
             petId: occurrence.petId,
             type: plan.type.recordType,
             title: "\(plan.name) skipped",
             value: reason,
-            note: "Skipped by Alex"
+            note: "Skipped by \(caregiver)"
         )
         save()
+    }
+
+    private var currentCaregiverName: String {
+        // No account system. Use a generic label so completion records read sensibly without
+        // a fabricated user name like "Alex".
+        "Caregiver"
     }
 
     func addCarePlan(_ plan: CarePlan) {
@@ -145,6 +219,11 @@ final class AppState: ObservableObject {
         occurrences = []
         records = []
         storage.delete()
+        // Wipe every scheduled and delivered reminder so the OS does not fire
+        // notifications for plans that no longer exist anywhere in the app.
+        let center = UNUserNotificationCenter.current()
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
     }
 
     func save() {

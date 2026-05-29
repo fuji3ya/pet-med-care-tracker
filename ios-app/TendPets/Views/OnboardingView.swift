@@ -59,8 +59,8 @@ struct OnboardingView: View {
             body: "You do not need to organize everything today. Start with the care task that would be worst to forget.",
             proof: "First reminder in under a minute",
             cards: [
-                OnboardingCard(title: "Momo", detail: "Example pet profile is ready."),
-                OnboardingCard(title: "Heart med", detail: "Use this as your first medication routine.")
+                OnboardingCard(title: "One pet", detail: "Cat, dog, rabbit, bird, reptile, or small animal — start with the one you care for most."),
+                OnboardingCard(title: "One routine", detail: "Pick the medication or visit that would be the worst to miss. Add it first.")
             ]
         )
     ]
@@ -93,10 +93,11 @@ struct OnboardingView: View {
                         .foregroundStyle(TPColor.primary)
 
                     Text(currentStep.title)
-                        .font(.system(size: 38, weight: .bold, design: .default))
+                        .font(.largeTitle.weight(.bold))
                         .foregroundStyle(TPColor.text)
                         .lineSpacing(-2)
-                        .minimumScaleFactor(0.86)
+                        .minimumScaleFactor(0.7)
+                        .dynamicTypeSize(.large...DynamicTypeSize.xxxLarge)
 
                     Text(currentStep.body)
                         .font(.body)

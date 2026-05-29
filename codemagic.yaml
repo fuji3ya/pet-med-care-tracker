@@ -9,16 +9,31 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.tendpets.app
+        bundle_identifier: app.starvingeffort.tendpets
+      groups:
+        - tendpets_app_store_connect  # required: APP_STORE_APPLE_ID, APPLE_TEAM_ID (Codemagic secret group)
       vars:
-        BUNDLE_ID: "com.tendpets.app"
+        BUNDLE_ID: "app.starvingeffort.tendpets"
         XCODE_PROJECT: "ios-app/TendPets.xcodeproj"
         XCODE_SCHEME: "TendPets"
-        APP_STORE_APPLE_ID: "REPLACE_WITH_APP_STORE_APPLE_ID"
     scripts:
       - name: Install XcodeGen
         script: |
           brew install xcodegen
+      - name: Inject signing values into project.yml and StoreKit config
+        script: |
+          cd "$CM_BUILD_DIR"
+          if [ -z "$APPLE_TEAM_ID" ] || [ -z "$APP_STORE_APPLE_ID" ]; then
+            echo "ERROR: APPLE_TEAM_ID and APP_STORE_APPLE_ID must be set in Codemagic secret group 'tendpets_app_store_connect'"
+            exit 1
+          fi
+          # project.yml: DEVELOPMENT_TEAM
+          sed -i.bak "s|DEVELOPMENT_TEAM: \"\"|DEVELOPMENT_TEAM: \"$APPLE_TEAM_ID\"|" ios-app/project.yml
+          # StoreKit JSON: _developerTeamID + _applicationInternalID
+          sed -i.bak "s|\"_developerTeamID\": \"TEAMID\"|\"_developerTeamID\": \"$APPLE_TEAM_ID\"|" ios-app/StoreKit/TendPets.storekit
+          sed -i.bak "s|\"_applicationInternalID\": \"1234567890\"|\"_applicationInternalID\": \"$APP_STORE_APPLE_ID\"|" ios-app/StoreKit/TendPets.storekit
+          rm -f ios-app/project.yml.bak ios-app/StoreKit/TendPets.storekit.bak
+          echo "Signing values injected."
       - name: Generate Xcode project
         script: |
           cd "$CM_BUILD_DIR/ios-app"
@@ -29,12 +44,8 @@ workflows:
       - name: Increment App Store build number
         script: |
           cd "$CM_BUILD_DIR/ios-app"
-          if [ "$APP_STORE_APPLE_ID" = "REPLACE_WITH_APP_STORE_APPLE_ID" ]; then
-            agvtool new-version -all "${BUILD_NUMBER:-1}"
-          else
-            LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo 0)
-            agvtool new-version -all $((LATEST_BUILD_NUMBER + 1))
-          fi
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          agvtool new-version -all $((LATEST_BUILD_NUMBER + 1))
       - name: Build IPA for TestFlight
         script: |
           xcode-project build-ipa \
@@ -60,16 +71,28 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.tendpets.app
+        bundle_identifier: app.starvingeffort.tendpets
+      groups:
+        - tendpets_app_store_connect  # required: APP_STORE_APPLE_ID, APPLE_TEAM_ID
       vars:
-        BUNDLE_ID: "com.tendpets.app"
+        BUNDLE_ID: "app.starvingeffort.tendpets"
         XCODE_PROJECT: "ios-app/TendPets.xcodeproj"
         XCODE_SCHEME: "TendPets"
-        APP_STORE_APPLE_ID: "REPLACE_WITH_APP_STORE_APPLE_ID"
     scripts:
       - name: Install XcodeGen
         script: |
           brew install xcodegen
+      - name: Inject signing values into project.yml and StoreKit config
+        script: |
+          cd "$CM_BUILD_DIR"
+          if [ -z "$APPLE_TEAM_ID" ] || [ -z "$APP_STORE_APPLE_ID" ]; then
+            echo "ERROR: APPLE_TEAM_ID and APP_STORE_APPLE_ID must be set in Codemagic secret group 'tendpets_app_store_connect'"
+            exit 1
+          fi
+          sed -i.bak "s|DEVELOPMENT_TEAM: \"\"|DEVELOPMENT_TEAM: \"$APPLE_TEAM_ID\"|" ios-app/project.yml
+          sed -i.bak "s|\"_developerTeamID\": \"TEAMID\"|\"_developerTeamID\": \"$APPLE_TEAM_ID\"|" ios-app/StoreKit/TendPets.storekit
+          sed -i.bak "s|\"_applicationInternalID\": \"1234567890\"|\"_applicationInternalID\": \"$APP_STORE_APPLE_ID\"|" ios-app/StoreKit/TendPets.storekit
+          rm -f ios-app/project.yml.bak ios-app/StoreKit/TendPets.storekit.bak
       - name: Generate Xcode project
         script: |
           cd "$CM_BUILD_DIR/ios-app"
@@ -80,12 +103,8 @@ workflows:
       - name: Increment App Store build number
         script: |
           cd "$CM_BUILD_DIR/ios-app"
-          if [ "$APP_STORE_APPLE_ID" = "REPLACE_WITH_APP_STORE_APPLE_ID" ]; then
-            agvtool new-version -all "${BUILD_NUMBER:-1}"
-          else
-            LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo 0)
-            agvtool new-version -all $((LATEST_BUILD_NUMBER + 1))
-          fi
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          agvtool new-version -all $((LATEST_BUILD_NUMBER + 1))
       - name: Build IPA for App Store
         script: |
           xcode-project build-ipa \

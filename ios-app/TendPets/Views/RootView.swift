@@ -12,6 +12,7 @@ struct RootView: View {
     @AppStorage("tendPetsOnboardingComplete") private var onboardingComplete = false
     @State private var selectedTab: AppTab = .today
     @State private var showOnboarding = false
+    @State private var hasCheckedFirstLaunch = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -73,7 +74,12 @@ struct RootView: View {
                 }
             )
         }
-        .onAppear {
+        .task {
+            // First-launch only — `task` fires once when the view first appears.
+            // Using onAppear would re-fire on every tab switch and pop the
+            // onboarding sheet back open after the user dismissed it.
+            guard !hasCheckedFirstLaunch else { return }
+            hasCheckedFirstLaunch = true
             if !onboardingComplete {
                 showOnboarding = true
             }

@@ -2,31 +2,56 @@ import SwiftUI
 
 struct RecordsView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var store: SubscriptionStore
     @State private var showSummary = false
+    @State private var showPaywall = false
 
     var body: some View {
+        let visibleRecords = appState.recordsVisibleToUser(hasPlus: store.hasPlus)
+        let totalRecords = appState.records.count
+        let hiddenCount = totalRecords - visibleRecords.count
+
         List {
             Section("Vet summary") {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Prepare clear notes")
-                        .font(.headline)
-                    Text("Last 30 days, active meds, skipped care, weight trend, vaccine history, and visit notes.")
+                    HStack {
+                        Text("Prepare clear notes")
+                            .font(.headline)
+                        if !store.hasPlus {
+                            Text("Plus")
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(TPColor.primarySoft, in: Capsule())
+                                .foregroundStyle(TPColor.primary)
+                        }
+                    }
+                    Text(store.hasPlus
+                         ? "Last 30 days of active meds, skipped care, weight history, vaccine records, and visit notes — built from this device's records."
+                         : "Tend Pets Plus builds a vet-ready summary from your records: active meds, skipped care, weight trend, vaccine and visit history.")
                         .font(.subheadline)
                         .foregroundStyle(TPColor.muted)
-                    Button("Preview PDF") {
-                        showSummary = true
+                    if store.hasPlus {
+                        Button("Open summary") {
+                            showSummary = true
+                        }
+                        .buttonStyle(PrimaryPillButtonStyle())
+                        ShareLink(item: VetSummary(appState: appState).shareText) {
+                            Label("Share summary text", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(NeutralPillButtonStyle())
+                    } else {
+                        Button("Unlock with Plus") {
+                            showPaywall = true
+                        }
+                        .buttonStyle(PrimaryPillButtonStyle())
                     }
-                    .buttonStyle(PrimaryPillButtonStyle())
-                    ShareLink(item: vetSummaryShareText) {
-                        Label("Share summary text", systemImage: "square.and.arrow.up")
-                    }
-                    .buttonStyle(NeutralPillButtonStyle())
                 }
                 .padding(.vertical, 8)
             }
 
             Section("Timeline") {
-                if appState.records.isEmpty {
+                if visibleRecords.isEmpty && totalRecords == 0 {
                     EmptyStateView(
                         systemImage: "folder.badge.plus",
                         title: "Records will build automatically",
@@ -35,7 +60,7 @@ struct RecordsView: View {
                         action: nil
                     )
                 } else {
-                    ForEach(appState.records.sorted { $0.date > $1.date }) { record in
+                    ForEach(visibleRecords.sorted { $0.date > $1.date }) { record in
                         Label {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(record.title)
@@ -51,6 +76,22 @@ struct RecordsView: View {
                             Image(systemName: record.type.systemImage)
                         }
                     }
+                    if hiddenCount > 0 {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                Label("\(hiddenCount) older record\(hiddenCount == 1 ? "" : "s") hidden", systemImage: "lock")
+                                Spacer()
+                                Text("Plus")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(TPColor.primarySoft, in: Capsule())
+                                    .foregroundStyle(TPColor.primary)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -61,11 +102,99 @@ struct RecordsView: View {
             VetSummaryView()
                 .environmentObject(appState)
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(store)
+        }
+    }
+}
+
+// MARK: - VetSummary — pure value type that derives summary text from actual AppState data.
+
+struct VetSummary {
+    let appState: AppState
+
+    var primaryPet: Pet? {
+        appState.pets.first
     }
 
-    private var vetSummaryShareText: String {
-        let petName = appState.pets.first?.name ?? "Pet"
-        return "\(petName) care summary: active medication, skipped care, weight trend, vaccine history, and visit notes."
+    var activeMedicationLines: [String] {
+        appState.carePlans
+            .filter { $0.type == .medicine && $0.active }
+            .map { plan in
+                let time = String(format: "%02d:%02d", plan.timeHour, plan.timeMinute)
+                let detail = plan.detail.isEmpty ? "no detail" : plan.detail
+                return "• \(plan.name) — \(plan.repeatRule.rawValue.lowercased()) at \(time) (\(detail))"
+            }
+    }
+
+    var recentSkippedLines: [String] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date.distantPast
+        return appState.records
+            .filter { $0.date >= cutoff && $0.title.contains("skipped") }
+            .sorted { $0.date > $1.date }
+            .prefix(5)
+            .map { record in
+                "• \(record.date.formatted(date: .abbreviated, time: .omitted)): \(record.title) (\(record.value ?? "no reason"))"
+            }
+    }
+
+    var weightTrendText: String {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date.distantPast
+        let weights = appState.records
+            .filter { $0.type == .weight && $0.date >= cutoff }
+            .sorted { $0.date < $1.date }
+        guard !weights.isEmpty else {
+            if let weight = primaryPet?.weightValue, let pet = primaryPet {
+                return "Current: \(weight.formatted(.number.precision(.fractionLength(0...1)))) \(pet.weightUnit.rawValue). No weight check-ins recorded in the last 30 days."
+            }
+            return "No weight history recorded."
+        }
+        return weights
+            .map { "• \($0.date.formatted(date: .abbreviated, time: .omitted)): \($0.value ?? "—")" }
+            .joined(separator: "\n")
+    }
+
+    var vaccineHistoryLines: [String] {
+        appState.records
+            .filter { $0.type == .vaccine }
+            .sorted { $0.date > $1.date }
+            .prefix(10)
+            .map { "• \($0.date.formatted(date: .abbreviated, time: .omitted)): \($0.title) (\($0.value ?? "no lot"))" }
+    }
+
+    var recentVisitLines: [String] {
+        appState.records
+            .filter { $0.type == .visit }
+            .sorted { $0.date > $1.date }
+            .prefix(5)
+            .map { "• \($0.date.formatted(date: .abbreviated, time: .omitted)): \($0.title) — \($0.note)" }
+    }
+
+    var shareText: String {
+        let petName = primaryPet?.name ?? "Pet"
+        var lines: [String] = ["\(petName) — care summary (last 30 days)", ""]
+
+        lines.append("Active medication:")
+        lines.append(activeMedicationLines.isEmpty ? "• None recorded" : activeMedicationLines.joined(separator: "\n"))
+        lines.append("")
+
+        lines.append("Recent skipped care:")
+        lines.append(recentSkippedLines.isEmpty ? "• None" : recentSkippedLines.joined(separator: "\n"))
+        lines.append("")
+
+        lines.append("Weight history:")
+        lines.append(weightTrendText)
+        lines.append("")
+
+        lines.append("Vaccine history:")
+        lines.append(vaccineHistoryLines.isEmpty ? "• None recorded" : vaccineHistoryLines.joined(separator: "\n"))
+        lines.append("")
+
+        lines.append("Recent visits:")
+        lines.append(recentVisitLines.isEmpty ? "• None recorded" : recentVisitLines.joined(separator: "\n"))
+
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -73,36 +202,37 @@ struct VetSummaryView: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
+        let summary = VetSummary(appState: appState)
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(primaryPet.name)
-                        .font(.title.weight(.bold))
-                    Text("\(primaryPet.ageText) - \(primaryPet.weightText)")
-                        .foregroundStyle(TPColor.muted)
+                    if let pet = summary.primaryPet {
+                        Text(pet.name)
+                            .font(.title.weight(.bold))
+                        Text("\(pet.ageText) — \(pet.weightText)")
+                            .foregroundStyle(TPColor.muted)
+                    } else {
+                        Text("No pet on file")
+                            .font(.title.weight(.bold))
+                        Text("Add a pet to start building summaries.")
+                            .foregroundStyle(TPColor.muted)
+                    }
 
-                    summarySection("Active medication", "Heart med, daily 8:00 AM, after breakfast.")
-                    summarySection("Recent skipped care", "May 3: skipped breakfast note. Reason: not eating.")
-                    summarySection("Weight trend", "Stable over the last 30 days.")
-                    summarySection("Owner notes", "Coughing less this week. Appetite lower in mornings.")
+                    summarySection("Active medication", summary.activeMedicationLines.isEmpty ? "None recorded." : summary.activeMedicationLines.joined(separator: "\n"))
+                    summarySection("Recent skipped care (30 days)", summary.recentSkippedLines.isEmpty ? "None." : summary.recentSkippedLines.joined(separator: "\n"))
+                    summarySection("Weight history (30 days)", summary.weightTrendText)
+                    summarySection("Vaccine history", summary.vaccineHistoryLines.isEmpty ? "None recorded." : summary.vaccineHistoryLines.joined(separator: "\n"))
+                    summarySection("Recent visits", summary.recentVisitLines.isEmpty ? "None recorded." : summary.recentVisitLines.joined(separator: "\n"))
                 }
                 .padding()
             }
             .navigationTitle("Vet Summary")
             .toolbar {
-                ShareLink(item: shareText) {
+                ShareLink(item: summary.shareText) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
             }
         }
-    }
-
-    private var primaryPet: Pet {
-        appState.pets.first ?? Pet(name: "Pet", species: .other)
-    }
-
-    private var shareText: String {
-        "\(primaryPet.name) care summary. Active medication: Heart med daily at 8:00 AM. Recent skipped care: May 3 breakfast note. Weight trend: stable. Owner notes: appetite lower in mornings."
     }
 
     private func summarySection(_ title: String, _ body: String) -> some View {
@@ -114,11 +244,11 @@ struct VetSummaryView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-            .background(.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
-private extension RecordType {
+extension RecordType {
     var systemImage: String {
         switch self {
         case .weight: "scalemass"

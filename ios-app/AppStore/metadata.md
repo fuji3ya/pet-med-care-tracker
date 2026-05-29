@@ -20,49 +20,78 @@ Track medication reminders, vet visits, vaccine history, weight, food notes, and
 
 Tend Pets is designed for dogs, cats, rabbits, birds, reptiles, and small animals.
 
-Key features:
+Free features:
 
-- Medication and care reminders
+- Up to 1 pet and 3 active reminders
 - One-tap Done, Snooze, and Skip
-- Pet profiles and care history
-- Weight records
-- Vaccine records
-- Vet visit notes
-- Vet Summary export
-- Family care visibility
+- Today / Pets / Add / Records tabs
+- Last 7 days of care history
 
-Tend Pets does not provide veterinary medical advice, diagnosis, dosage recommendations, treatment recommendations, or emergency guidance. Always follow your veterinarian's instructions.
+Tend Pets Plus (subscription) adds:
+
+- Unlimited pets and reminders
+- Full care history (no 7-day limit)
+- Vet Summary builder (30-day medication, weight, vaccine, and visit summary)
+- Export all data as JSON via share sheet
+
+Tend Pets does not provide veterinary medical advice, diagnosis, dosage recommendations, treatment recommendations, or emergency guidance. It is a reminder and record-keeping tool only. Always follow your veterinarian's instructions.
+
+Tend Pets Plus is an auto-renewing subscription. Plus Monthly is $4.99 per month and Plus Yearly is $35.99 per year (Family tiers also available). Each plan starts with a 3-week free trial. Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription any time in your Apple ID account settings after purchase. See the Terms of Use and Privacy Policy linked in the app and on the support site.
 
 ## Keywords
 
-pet medication,pet medicine,dog medication,cat medication,pet care,vaccine record,vet notes,pet weight
+pet medication,vaccine reminder,vet records,medication tracker,pet care,pet health,weight log
+
+<!-- 93/100 chars. Removed redundant "pet medicine" (covered by "pet medication"),
+     "dog medication" / "cat medication" (Apple ASO auto-broadcasts species variants),
+     added high-intent terms "tracker" and "reminder" per 2026 ASO playbook. -->
+
 
 ## Support URL
 
-https://tendpets.app/support
+https://tendpets.starving-effort.com/support
 
 ## Privacy Policy URL
 
-https://tendpets.app/privacy
+https://tendpets.starving-effort.com/privacy
 
 ## Terms of Use URL
 
-https://tendpets.app/terms
+https://tendpets.starving-effort.com/terms
+
+> URL は Cloudflare Pages auto-domain。`starvingeffort.app/tendpets/*` or `tendpets.app` に custom domain 切替後は `legal/DEPLOY.md` §3 と本ファイルを同期更新する。
 
 ## Review Notes
 
 Tend Pets is a reminder and record-keeping utility for pet owners. It does not diagnose, recommend medication dosage, replace veterinary care, or provide emergency guidance.
 
-The app uses local sample data on first launch so reviewers can immediately test Today, Add Care, Records, Settings, and the subscription paywall. StoreKit products are configured in `StoreKit/TendPets.storekit` for sandbox testing.
+The app uses local sample data on first launch (one demo pet "Momo") so reviewers can immediately test Today, Add Care, Records, Settings, and the subscription paywall without needing to create data first. Reviewers can delete the demo pet via Settings → Delete all pet data. StoreKit products are configured in `StoreKit/TendPets.storekit` for sandbox testing.
+
+**Subscription gating** (verifiable in sandbox):
+- Free tier: 1 pet (PetsView shows "Free plan supports 1 pet" footer when limit hit), 3 active reminders (AddCareView shows "Free plan limit reached" footer), last 7 days of records (RecordsView shows "N older records hidden Plus" row), Vet Summary builder locked (RecordsView shows "Unlock with Plus" button), Export data locked (SettingsView shows "Plus" badge).
+- Plus tier (any of 4 products): all of the above unlocked.
+
+**Account model**: Tend Pets does not require a user account. All data is stored locally on device. There is no sign-in, no cloud sync, no server-side user profile. Settings → Delete all pet data permanently removes all locally stored data, satisfying the Apple Account Deletion guideline 5.1.1(v) requirement equivalent for local-only apps.
+
+**No tracking**: Privacy manifest declares NSPrivacyTracking=false. The app does not use third-party analytics, advertising SDKs, or cross-app tracking.
 
 ## Subscription Notes
 
-Plus Monthly: `tendpets.plus.monthly`
+| Product ID | Display | Price (USD) | Period | Trial |
+|---|---|---|---|---|
+| `tendpets.plus.monthly` | Plus Monthly | $4.99 | 1 month | 3 weeks free |
+| `tendpets.plus.yearly` | Plus Yearly | $35.99 | 1 year | 3 weeks free |
+| `tendpets.family.monthly` | Family Monthly | $6.99 | 1 month | 3 weeks free |
+| `tendpets.family.yearly` | Family Yearly | $49.99 | 1 year | 3 weeks free |
 
-Plus Yearly: `tendpets.plus.yearly`
+**Subscription group**: `Tend Pets` (single group, products are upgrade/downgrade exchangeable).
 
-Family Monthly: `tendpets.family.monthly`
+**Trial strategy**: 3 weeks (21 days) — based on RevenueCat 2026 data showing 17-32 day trials produce ~42.5% median conversion vs ~25.5% for trials under 4 days.
 
-Family Yearly: `tendpets.family.yearly`
+**Pricing rationale**:
+- Plus Monthly $4.99: utility-category mid-range, low psychological barrier
+- Plus Yearly $35.99: 40% off vs monthly (= $3.00/mo equivalent), within RevenueCat conversion sweet spot
+- Family tiers: compressed to $6.99/$49.99 (was $8.99/$69.99) to narrow gap with Plus tier
+- Hard paywall is NOT used in Phase 0 — freemium model with subscription upsell. Reassess after DAU 100+ milestone.
 
-Final App Store Connect products must match these IDs or the code must be updated.
+Final App Store Connect products must match these IDs and prices, or the StoreKit config and code must be updated.

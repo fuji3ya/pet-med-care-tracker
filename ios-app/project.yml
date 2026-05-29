@@ -22,7 +22,7 @@ targets:
       - StoreKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.tendpets.app
+        PRODUCT_BUNDLE_IDENTIFIER: app.starvingeffort.tendpets
         INFOPLIST_FILE: TendPets/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.9"

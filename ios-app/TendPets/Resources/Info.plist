@@ -2,12 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
   <key>CFBundleDisplayName</key>
+  <string>Tend Pets</string>
+  <key>CFBundleName</key>
   <string>Tend Pets</string>
   <key>CFBundleShortVersionString</key>
   <string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key>
   <string>$(CURRENT_PROJECT_VERSION)</string>
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+  <key>UIRequiredDeviceCapabilities</key>
+  <array>
+    <string>arm64</string>
+  </array>
   <key>UILaunchScreen</key>
   <dict>
     <key>UIColorName</key>
@@ -21,5 +33,7 @@
   <string>Tend Pets sends reminders for pet medication, vet visits, vaccines, weight checks, and care routines you create.</string>
   <key>ITSAppUsesNonExemptEncryption</key>
   <false/>
+  <key>UIUserInterfaceStyle</key>
+  <string>Light</string>
 </dict>
 </plist>

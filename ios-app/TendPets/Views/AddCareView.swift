@@ -3,14 +3,28 @@ import SwiftUI
 struct AddCareView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var notifications: NotificationService
+    @EnvironmentObject private var store: SubscriptionStore
+    @State private var showPaywall = false
 
     @State private var type: CareType = .medicine
-    @State private var name = "Heart med"
-    @State private var detail = "1 tablet, after breakfast"
-    @State private var dueTime = Date()
+    @State private var name = ""
+    @State private var detail = ""
+    @State private var dueTime: Date = {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 8
+        components.minute = 0
+        return Calendar.current.date(from: components) ?? Date()
+    }()
+    @State private var specificDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     @State private var repeatRule: RepeatRule = .daily
     @State private var selectedPetId: UUID?
     @State private var validationMessage: String?
+
+    private var requiresSpecificDate: Bool {
+        // Vaccine and Visit reminders are typically future-dated single events,
+        // not daily recurrences. Force date picker for these types.
+        type == .vaccine || type == .visit
+    }
 
     var body: some View {
         let config = AddCareConfig(type: type)
@@ -37,12 +51,32 @@ struct AddCareView: View {
                 TextField(config.detailPlaceholder, text: $detail)
                     .textContentType(.none)
                     .accessibilityLabel(config.detailAccessibilityLabel)
+                if requiresSpecificDate {
+                    DatePicker(
+                        "Date",
+                        selection: $specificDate,
+                        in: Date()...,
+                        displayedComponents: .date
+                    )
+                    .accessibilityHint("Choose the calendar date for this reminder.")
+                }
                 DatePicker("Time", selection: $dueTime, displayedComponents: .hourAndMinute)
                     .accessibilityHint("Choose the time Tend Pets should remind you.")
-                Picker("Repeat", selection: $repeatRule) {
-                    ForEach(RepeatRule.allCases) { rule in
-                        Text(rule.rawValue).tag(rule)
+                if !requiresSpecificDate {
+                    Picker("Repeat", selection: $repeatRule) {
+                        ForEach(RepeatRule.allCases) { rule in
+                            Text(rule.rawValue).tag(rule)
+                        }
                     }
+                }
+            }
+            .onChange(of: type) { _, newType in
+                // Vaccine/Visit are inherently single-date events; medicine/food/weight
+                // default to daily. Sync repeatRule to keep the UI honest.
+                if newType == .vaccine || newType == .visit {
+                    repeatRule = .onDate
+                } else {
+                    repeatRule = .daily
                 }
             }
 
@@ -50,7 +84,7 @@ struct AddCareView: View {
                 HStack {
                     Text(config.notificationTitle)
                     Spacer()
-                    Text(notifications.authorizationStatus == .authorized ? "On" : "Not enabled")
+                    Text(notifications.isAuthorized ? "On" : "Not enabled")
                         .foregroundStyle(TPColor.muted)
                 }
                 Text(config.notificationDetail)
@@ -80,6 +114,36 @@ struct AddCareView: View {
         .onAppear {
             selectedPetId = selectedPetId ?? appState.pets.first?.id
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(store)
+        }
+        .safeAreaInset(edge: .bottom) {
+            if !store.hasPlus {
+                let remaining = AppState.freeMaxActiveCarePlans - appState.activeCarePlanCount
+                if remaining <= 0 {
+                    HStack {
+                        Image(systemName: "lock")
+                        Text("Free plan limit reached. Upgrade to Plus for unlimited reminders.")
+                            .font(.footnote)
+                        Spacer()
+                        Button("Upgrade") { showPaywall = true }
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .padding(12)
+                    .background(TPColor.primarySoft)
+                } else if remaining <= 1 {
+                    HStack {
+                        Image(systemName: "info.circle")
+                        Text("\(remaining) free reminder slot remaining.")
+                            .font(.footnote)
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(TPColor.groupedBackground)
+                }
+            }
+        }
     }
 
     private var canSave: Bool {
@@ -89,8 +153,10 @@ struct AddCareView: View {
 
     private func save() {
         let config = AddCareConfig(type: type)
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedDetail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Cap input length so very long input does not break notification titles
+        // (UN content title soft-limit ~ 78 chars on lock screen) or list rows.
+        let trimmedName = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80))
+        let trimmedDetail = String(detail.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
 
         guard !trimmedName.isEmpty else {
             validationMessage = config.nameRequiredMessage
@@ -110,6 +176,12 @@ struct AddCareView: View {
             return
         }
 
+        guard appState.canAddCarePlan(hasPlus: store.hasPlus) else {
+            validationMessage = "Free plan supports up to \(AppState.freeMaxActiveCarePlans) active reminders. Upgrade to Plus for unlimited."
+            showPaywall = true
+            return
+        }
+
         let components = Calendar.current.dateComponents([.hour, .minute], from: dueTime)
         let plan = CarePlan(
             petId: pet.id,
@@ -118,10 +190,21 @@ struct AddCareView: View {
             detail: trimmedDetail.isEmpty ? config.defaultDetail : trimmedDetail,
             timeHour: components.hour ?? 8,
             timeMinute: components.minute ?? 0,
-            repeatRule: repeatRule
+            repeatRule: repeatRule,
+            specificDate: requiresSpecificDate ? specificDate : nil
         )
         appState.addCarePlan(plan)
         validationMessage = nil
+
+        // Reset the form so the next reminder starts empty instead of
+        // re-using the previous entry's text.
+        let savedType = type
+        let savedPetId = selectedPetId
+        name = ""
+        detail = ""
+        type = savedType
+        selectedPetId = savedPetId
+
         Task { @MainActor in
             var canScheduleNotification = notifications.isAuthorized
             if notifications.authorizationStatus == .notDetermined {
@@ -130,6 +213,7 @@ struct AddCareView: View {
 
             if canScheduleNotification {
                 await notifications.schedule(plan: plan, pet: pet)
+                validationMessage = "Reminder saved."
             } else {
                 validationMessage = "Reminder saved. Notifications are off for this device."
             }

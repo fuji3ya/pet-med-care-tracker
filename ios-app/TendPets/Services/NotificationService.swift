@@ -66,13 +66,26 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
             "petId": pet.id.uuidString
         ]
 
-        var date = DateComponents()
-        date.hour = plan.timeHour
-        date.minute = plan.timeMinute
+        let trigger: UNNotificationTrigger
+        switch plan.repeatRule {
+        case .daily:
+            var components = DateComponents()
+            components.hour = plan.timeHour
+            components.minute = plan.timeMinute
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        case .onDate:
+            guard let specificDate = plan.specificDate else {
+                // Without a date we cannot schedule a one-shot reminder.
+                return
+            }
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: specificDate)
+            components.hour = plan.timeHour
+            components.minute = plan.timeMinute
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        }
 
-        let trigger = UNCalendarNotificationTrigger(dateMatching: date, repeats: plan.repeatRule == .daily)
         let request = UNNotificationRequest(identifier: plan.id.uuidString, content: content, trigger: trigger)
-
         try? await UNUserNotificationCenter.current().add(request)
     }
 
@@ -108,9 +121,32 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
         try? await UNUserNotificationCenter.current().add(request)
     }
 
+    static let snoozeDefaultMinutes = 30
+
+    /// Cancel any pending reminders (main + snooze) for a specific plan. Call this
+    /// when the user deletes a care plan so the OS does not fire notifications for
+    /// a plan that no longer exists.
+    func cancelReminders(for planId: UUID) {
+        let center = UNUserNotificationCenter.current()
+        let identifiers = [planId.uuidString, "\(planId.uuidString).snooze"]
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        center.removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
+
+    /// Cancel every Tend Pets reminder. Call this when the user wipes all data.
+    func cancelAllReminders() {
+        let center = UNUserNotificationCenter.current()
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
+    }
+
     func registerCategories() {
-        let done = UNNotificationAction(identifier: "CARE_DONE", title: "Done")
-        let snooze = UNNotificationAction(identifier: "CARE_SNOOZE", title: "Snooze")
+        let done = UNNotificationAction(identifier: "CARE_DONE", title: "Done", options: [])
+        let snooze = UNNotificationAction(
+            identifier: "CARE_SNOOZE",
+            title: "Snooze \(Self.snoozeDefaultMinutes) min",
+            options: []
+        )
         let category = UNNotificationCategory(
             identifier: "CARE_REMINDER",
             actions: [done, snooze],
@@ -145,7 +181,7 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
         case "CARE_DONE":
             action = .done(planId: planId)
         case "CARE_SNOOZE":
-            action = .snooze(planId: planId, minutes: 10)
+            action = .snooze(planId: planId, minutes: NotificationService.snoozeDefaultMinutes)
         default:
             action = .opened(planId: planId)
         }

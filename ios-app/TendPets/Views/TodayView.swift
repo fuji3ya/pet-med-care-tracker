@@ -11,16 +11,16 @@ struct TodayView: View {
             if let pet = appState.pets.first {
                 Section {
                     HStack(spacing: 12) {
-                        CareRingView(progress: 0.67, initial: String(pet.name.prefix(1)))
+                        CareRingView(progress: todayProgress, initial: String(pet.name.prefix(1)))
                         VStack(alignment: .leading, spacing: 3) {
                             Text(pet.name)
                                 .font(.headline)
-                            Text("Tue, May 5 - 4 of 6 done")
+                            Text(todaySummaryText)
                                 .font(.subheadline)
                                 .foregroundStyle(TPColor.muted)
                         }
                         Spacer()
-                        Text("67%")
+                        Text("\(Int(todayProgress * 100))%")
                             .font(.footnote.weight(.bold))
                             .foregroundStyle(TPColor.primary)
                             .padding(.horizontal, 10)
@@ -42,7 +42,7 @@ struct TodayView: View {
                 }
             } else {
                 Section("Due now") {
-                    ForEach(appState.todaysOccurrences) { occurrence in
+                    ForEach(dueOccurrences) { occurrence in
                         if let plan = appState.plan(for: occurrence.planId),
                            let pet = appState.pet(for: occurrence.petId) {
                             CareCardView(
@@ -63,10 +63,24 @@ struct TodayView: View {
                 }
             }
 
-            Section("Later today") {
-                Label("Breakfast notes", systemImage: "fork.knife")
-                Label("Rio eye drops - 12:30", systemImage: "drop")
-                Label("Luna vet visit - 16:00", systemImage: "cross.case")
+            if !laterTodayOccurrences.isEmpty {
+                Section("Later today") {
+                    ForEach(laterTodayOccurrences) { occurrence in
+                        if let plan = appState.plan(for: occurrence.planId),
+                           let pet = appState.pet(for: occurrence.petId) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(pet.name)'s \(plan.name)")
+                                    Text(formatTime(occurrence.dueAt))
+                                        .font(.caption)
+                                        .foregroundStyle(TPColor.muted)
+                                }
+                            } icon: {
+                                Image(systemName: plan.type.systemImage)
+                            }
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("Today")
@@ -77,18 +91,88 @@ struct TodayView: View {
                 .environmentObject(appState)
                 .presentationDetents([.height(240)])
         }
-        .confirmationDialog("Skip with note", isPresented: $showSkipSheet, titleVisibility: .visible) {
-            Button("Not eating") {
-                if let skipOccurrence {
-                    appState.skip(skipOccurrence, reason: "Not eating")
-                }
-            }
-            Button("Vet instructed") {
-                if let skipOccurrence {
-                    appState.skip(skipOccurrence, reason: "Vet instructed")
-                }
-            }
-            Button("Cancel", role: .cancel) {}
+        .confirmationDialog("Skip reason", isPresented: $showSkipSheet, titleVisibility: .visible) {
+            Button("Not eating") { recordSkip(reason: "Not eating") }
+            Button("Vet instructed") { recordSkip(reason: "Vet instructed") }
+            Button("Already given") { recordSkip(reason: "Already given") }
+            Button("Other") { recordSkip(reason: "Other") }
+            Button("Cancel", role: .cancel) { skipOccurrence = nil }
+        } message: {
+            Text("Tend Pets will record why care was skipped for vet history.")
+        }
+    }
+
+    // MARK: - Today computed properties
+
+    private var todaysAll: [CareOccurrence] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return appState.occurrences.filter {
+            calendar.isDate($0.dueAt, inSameDayAs: today)
+        }
+    }
+
+    private var todayDone: Int {
+        todaysAll.filter { $0.status == .done }.count
+    }
+
+    private var todayTotal: Int {
+        todaysAll.count
+    }
+
+    private var todayProgress: Double {
+        guard todayTotal > 0 else { return 0 }
+        return Double(todayDone) / Double(todayTotal)
+    }
+
+    private var todaySummaryText: String {
+        let dateText = Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        if todayTotal == 0 {
+            return "\(dateText) — no care scheduled"
+        }
+        return "\(dateText) — \(todayDone) of \(todayTotal) done"
+    }
+
+    private var dueOccurrences: [CareOccurrence] {
+        appState.todaysOccurrences.filter {
+            $0.status == .due || $0.status == .missed || $0.status == .done || $0.status == .skipped
+        }
+        .filter {
+            // Only show items that are due now or recently overdue (in the past).
+            $0.dueAt <= Date().addingTimeInterval(60)
+        }
+    }
+
+    private var laterTodayOccurrences: [CareOccurrence] {
+        let calendar = Calendar.current
+        let now = Date()
+        let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+        return appState.occurrences
+            .filter { $0.dueAt > now && $0.dueAt <= endOfDay }
+            .filter { $0.status == .upcoming || $0.status == .due }
+            .sorted { $0.dueAt < $1.dueAt }
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened)
+    }
+
+    private func recordSkip(reason: String) {
+        if let skipOccurrence {
+            appState.skip(skipOccurrence, reason: reason)
+        }
+        skipOccurrence = nil
+    }
+}
+
+private extension CareType {
+    var systemImage: String {
+        switch self {
+        case .medicine: "pills"
+        case .food: "fork.knife"
+        case .weight: "scalemass"
+        case .visit: "cross.case"
+        case .vaccine: "syringe"
         }
     }
 }
@@ -108,7 +192,7 @@ struct CareCardView: View {
                 .foregroundStyle(statusColor)
             Text("\(pet.name)'s \(plan.name)")
                 .font(.title3.weight(.bold))
-            Text(plan.detail)
+            Text(plan.detail.isEmpty ? "No additional notes" : plan.detail)
                 .font(.subheadline)
                 .foregroundStyle(TPColor.muted)
 
