@@ -80,17 +80,23 @@ final class AppState: ObservableObject {
     }
 
     // MARK: - Free tier limits
+    //
+    // Reminders are UNLIMITED on the free tier (matches the strongest competitor,
+    // PillPaw). Free is intentionally a complete single-pet habit-builder; Plus
+    // unlocks multiple pets, full history, the vet summary (charts + PDF), and
+    // data export.
 
     static let freeMaxPets = 1
-    static let freeMaxActiveCarePlans = 3
     static let freeRecordsHistoryDays = 7
 
     func canAddPet(hasPlus: Bool) -> Bool {
         hasPlus || pets.count < Self.freeMaxPets
     }
 
+    /// Reminders are unlimited for everyone now. Kept as a method so call sites
+    /// stay stable if a cap is ever reintroduced.
     func canAddCarePlan(hasPlus: Bool) -> Bool {
-        hasPlus || activeCarePlanCount < Self.freeMaxActiveCarePlans
+        true
     }
 
     var activeCarePlanCount: Int {
@@ -106,6 +112,59 @@ final class AppState: ObservableObject {
     func addPet(_ pet: Pet) {
         pets.append(pet)
         save()
+    }
+
+    /// Replace an existing pet (edit name, species, weight, photo, etc.).
+    func updatePet(_ pet: Pet) {
+        guard let idx = pets.firstIndex(where: { $0.id == pet.id }) else { return }
+        pets[idx] = pet
+        save()
+    }
+
+    /// Replace an existing care plan and re-point its active (not-yet-completed)
+    /// occurrence to the new schedule. Caller is responsible for rescheduling the
+    /// local notification.
+    func updateCarePlan(_ plan: CarePlan) {
+        guard let idx = carePlans.firstIndex(where: { $0.id == plan.id }) else { return }
+        carePlans[idx] = plan
+        if let occIdx = occurrences.firstIndex(where: { $0.planId == plan.id && $0.status != .done && $0.status != .skipped }) {
+            occurrences[occIdx].dueAt = plan.nextDueDate()
+        }
+        save()
+    }
+
+    // MARK: - Ad-hoc logging (no reminder needed)
+
+    /// Log a one-off record (weight, symptom, note) directly to history.
+    func logRecord(petId: UUID, type: RecordType, title: String, value: String?, note: String, date: Date = Date()) {
+        records.append(CareRecord(petId: petId, type: type, date: date, title: title, value: value, note: note))
+        save()
+    }
+
+    func logWeight(petId: UUID, value: Double, unit: WeightUnit, date: Date = Date(), note: String = "") {
+        let formatted = "\(value.formatted(.number.precision(.fractionLength(0...1)))) \(unit.rawValue)"
+        logRecord(petId: petId, type: .weight, title: "Weight check", value: formatted, note: note, date: date)
+        // Keep the pet's headline weight in sync with the latest reading.
+        if let idx = pets.firstIndex(where: { $0.id == petId }) {
+            pets[idx].weightValue = value
+            pets[idx].weightUnit = unit
+            save()
+        }
+    }
+
+    func logSymptom(petId: UUID, name: String, severity: SymptomSeverity, note: String, date: Date = Date()) {
+        logRecord(petId: petId, type: .symptom, title: name, value: severity.rawValue, note: note, date: date)
+    }
+
+    /// Weight records for a pet, oldest-first, with a parsed numeric value (for charts).
+    func weightSeries(for petId: UUID) -> [(date: Date, value: Double)] {
+        records
+            .filter { $0.petId == petId && $0.type == .weight }
+            .compactMap { rec -> (date: Date, value: Double)? in
+                guard let v = rec.numericValue else { return nil }
+                return (date: rec.date, value: v)
+            }
+            .sorted { $0.date < $1.date }
     }
 
     /// Delete a pet and all its care plans, occurrences, records, and pending

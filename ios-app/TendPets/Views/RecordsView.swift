@@ -174,6 +174,21 @@ struct VetSummary {
             .map { "• \($0.date.formatted(date: .abbreviated, time: .omitted)): \($0.title) — \($0.note)" }
     }
 
+    var recentSymptomLines: [String] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date.distantPast
+        return appState.records
+            .filter { $0.type == .symptom && $0.date >= cutoff }
+            .sorted { $0.date > $1.date }
+            .prefix(10)
+            .map { "• \($0.date.formatted(date: .abbreviated, time: .omitted)): \($0.title) (\($0.value ?? "—"))\($0.note.isEmpty ? "" : " — \($0.note)")" }
+    }
+
+    /// Numeric weight points for the chart (oldest first).
+    var weightPoints: [(date: Date, value: Double)] {
+        guard let pet = primaryPet else { return [] }
+        return appState.weightSeries(for: pet.id)
+    }
+
     var shareText: String {
         let petName = primaryPet?.name ?? "Pet"
         var lines: [String] = ["\(petName) — care summary (last 30 days)", ""]
@@ -196,6 +211,10 @@ struct VetSummary {
 
         lines.append("Recent visits:")
         lines.append(recentVisitLines.isEmpty ? "• None recorded" : recentVisitLines.joined(separator: "\n"))
+        lines.append("")
+
+        lines.append("Recent symptoms (30 days):")
+        lines.append(recentSymptomLines.isEmpty ? "• None recorded" : recentSymptomLines.joined(separator: "\n"))
 
         return lines.joined(separator: "\n")
     }
@@ -221,9 +240,24 @@ struct VetSummaryView: View {
                             .foregroundStyle(TPColor.muted)
                     }
 
+                    if summary.weightPoints.count >= 2 {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Weight trend")
+                                .font(.headline)
+                            WeightChartView(
+                                points: summary.weightPoints,
+                                unit: summary.primaryPet?.weightUnit.rawValue ?? "kg"
+                            )
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
                     summarySection("Active medication", summary.activeMedicationLines.isEmpty ? "None recorded." : summary.activeMedicationLines.joined(separator: "\n"))
                     summarySection("Recent skipped care (30 days)", summary.recentSkippedLines.isEmpty ? "None." : summary.recentSkippedLines.joined(separator: "\n"))
                     summarySection("Weight history (30 days)", summary.weightTrendText)
+                    summarySection("Recent symptoms (30 days)", summary.recentSymptomLines.isEmpty ? "None recorded." : summary.recentSymptomLines.joined(separator: "\n"))
                     summarySection("Vaccine history", summary.vaccineHistoryLines.isEmpty ? "None recorded." : summary.vaccineHistoryLines.joined(separator: "\n"))
                     summarySection("Recent visits", summary.recentVisitLines.isEmpty ? "None recorded." : summary.recentVisitLines.joined(separator: "\n"))
                 }
@@ -232,7 +266,15 @@ struct VetSummaryView: View {
             .navigationTitle("Vet Summary")
             .toolbar {
                 ShareLink(item: summary.shareText) {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                    Label("Share text", systemImage: "square.and.arrow.up")
+                }
+                if let pdfURL = VetSummaryPDF.makeFile(
+                    title: "\(summary.primaryPet?.name ?? "Pet") — Tend Pets vet summary",
+                    body: summary.shareText
+                ) {
+                    ShareLink(item: pdfURL) {
+                        Label("PDF", systemImage: "doc.richtext")
+                    }
                 }
             }
         }
@@ -260,6 +302,7 @@ extension RecordType {
         case .food: "fork.knife"
         case .note: "note.text"
         case .medicine: "pills"
+        case .symptom: "stethoscope"
         }
     }
 }

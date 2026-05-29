@@ -124,6 +124,15 @@ enum RecordType: String, Codable {
     case food
     case note
     case medicine
+    case symptom
+}
+
+enum SymptomSeverity: String, Codable, CaseIterable, Identifiable {
+    case mild = "Mild"
+    case moderate = "Moderate"
+    case severe = "Severe"
+
+    var id: String { rawValue }
 }
 
 struct CareRecord: Identifiable, Codable, Hashable {
@@ -134,4 +143,14 @@ struct CareRecord: Identifiable, Codable, Hashable {
     var title: String
     var value: String?
     var note: String
+
+    /// Parse a leading numeric value out of `value` (e.g. "4.2 kg" -> 4.2).
+    /// Used to build the weight trend chart from weight records.
+    var numericValue: Double? {
+        guard let value else { return nil }
+        let scanner = Scanner(string: value)
+        scanner.charactersToBeSkipped = CharacterSet.whitespaces
+        if let d = scanner.scanDouble() { return d }
+        return nil
+    }
 }

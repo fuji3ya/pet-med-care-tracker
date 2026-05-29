@@ -59,6 +59,16 @@ extension CareType {
         case .visit, .vaccine: TPColor.visit
         }
     }
+
+    var careIcon: String {
+        switch self {
+        case .medicine: "pills"
+        case .food: "fork.knife"
+        case .weight: "scalemass"
+        case .visit: "cross.case"
+        case .vaccine: "syringe"
+        }
+    }
 }
 
 struct CareRingView: View {

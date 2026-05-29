@@ -5,6 +5,7 @@ struct TodayView: View {
     @State private var snoozeOccurrence: CareOccurrence?
     @State private var skipOccurrence: CareOccurrence?
     @State private var showSkipSheet = false
+    @State private var showQuickLog = false
 
     var body: some View {
         List {
@@ -86,6 +87,19 @@ struct TodayView: View {
         .navigationTitle("Today")
         .scrollContentBackground(.hidden)
         .background(TPColor.groupedBackground)
+        .toolbar {
+            if !appState.pets.isEmpty {
+                Button {
+                    showQuickLog = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+                .accessibilityLabel("Quick log weight or symptom")
+            }
+        }
+        .sheet(isPresented: $showQuickLog) {
+            QuickLogSheet().environmentObject(appState)
+        }
         .sheet(item: $snoozeOccurrence) { occurrence in
             SnoozeSheet(occurrence: occurrence)
                 .environmentObject(appState)

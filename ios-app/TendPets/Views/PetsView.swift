@@ -2,11 +2,29 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
+enum PetsSheet: Identifiable {
+    case addPet
+    case editPet(Pet)
+    case editPlan(CarePlan)
+    case quickLog(UUID)
+    case paywall
+
+    var id: String {
+        switch self {
+        case .addPet: "addPet"
+        case .editPet(let p): "editPet-\(p.id)"
+        case .editPlan(let pl): "editPlan-\(pl.id)"
+        case .quickLog(let id): "quickLog-\(id)"
+        case .paywall: "paywall"
+        }
+    }
+}
+
 struct PetsView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var store: SubscriptionStore
-    @State private var showAddPet = false
-    @State private var showPaywall = false
+    @EnvironmentObject private var notifications: NotificationService
+    @State private var sheet: PetsSheet?
 
     var body: some View {
         List {
@@ -17,22 +35,33 @@ struct PetsView: View {
                         title: "Add your first pet",
                         message: "Tend Pets works for dogs, cats, rabbits, birds, reptiles, fish, and small animals. Start with one profile, then add shared care.",
                         actionTitle: "Add pet",
-                        action: { showAddPet = true }
+                        action: { sheet = .addPet }
                     )
                 }
             } else {
                 ForEach(appState.pets) { pet in
                     Section {
-                        HStack(spacing: 12) {
-                            CareRingView(progress: progress(for: pet), initial: String(pet.name.prefix(1)), photoName: pet.photoName)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(pet.name)
-                                    .font(.headline)
-                                Text("\(pet.ageText) — \(pet.weightText)")
-                                    .font(.subheadline)
+                        Button {
+                            sheet = .editPet(pet)
+                        } label: {
+                            HStack(spacing: 12) {
+                                CareRingView(progress: progress(for: pet), initial: String(pet.name.prefix(1)), photoName: pet.photoName)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(pet.name)
+                                        .font(.headline)
+                                        .foregroundStyle(TPColor.text)
+                                    Text("\(pet.ageText) — \(pet.weightText)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(TPColor.muted)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
                                     .foregroundStyle(TPColor.muted)
                             }
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Edit \(pet.name)")
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 appState.deletePet(pet.id)
@@ -42,21 +71,51 @@ struct PetsView: View {
                         }
                     }
 
-                    let plans = activePlans(for: pet)
-                    let nextVisit = nextVisitText(for: pet)
-                    let weightSummary = weightSummary(for: pet)
+                    Section("Care") {
+                        let plans = activePlans(for: pet)
+                        if plans.isEmpty {
+                            Text("No reminders yet — add one from the Add tab.")
+                                .font(.subheadline)
+                                .foregroundStyle(TPColor.muted)
+                        } else {
+                            ForEach(plans) { plan in
+                                Button {
+                                    sheet = .editPlan(plan)
+                                } label: {
+                                    Label {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(plan.name).foregroundStyle(TPColor.text)
+                                            Text(scheduleText(plan))
+                                                .font(.caption)
+                                                .foregroundStyle(TPColor.muted)
+                                        }
+                                    } icon: {
+                                        Image(systemName: plan.type.careIcon)
+                                            .foregroundStyle(plan.type.tint)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        appState.deleteCarePlan(plan.id)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                            }
+                        }
 
-                    if !plans.isEmpty || nextVisit != nil || weightSummary != nil {
-                        Section("Care overview") {
-                            if !plans.isEmpty {
-                                Label("\(plans.count) active reminder\(plans.count == 1 ? "" : "s")", systemImage: "bell")
-                            }
-                            if let nextVisit {
-                                Label(nextVisit, systemImage: "cross.case")
-                            }
-                            if let weightSummary {
-                                Label(weightSummary, systemImage: "scalemass")
-                            }
+                        Button {
+                            sheet = .quickLog(pet.id)
+                        } label: {
+                            Label("Log weight or symptom", systemImage: "plus.circle")
+                                .foregroundStyle(TPColor.primary)
+                        }
+
+                        if let weightSummary = weightSummary(for: pet) {
+                            Label(weightSummary, systemImage: "scalemass")
+                                .font(.subheadline)
+                                .foregroundStyle(TPColor.muted)
                         }
                     }
                 }
@@ -66,9 +125,9 @@ struct PetsView: View {
         .toolbar {
             Button {
                 if appState.canAddPet(hasPlus: store.hasPlus) {
-                    showAddPet = true
+                    sheet = .addPet
                 } else {
-                    showPaywall = true
+                    sheet = .paywall
                 }
             } label: {
                 Image(systemName: "plus")
@@ -77,13 +136,21 @@ struct PetsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(TPColor.groupedBackground)
-        .sheet(isPresented: $showAddPet) {
-            AddPetSheet()
-                .environmentObject(appState)
-        }
-        .sheet(isPresented: $showPaywall) {
-            PaywallView()
-                .environmentObject(store)
+        .sheet(item: $sheet) { which in
+            switch which {
+            case .addPet:
+                AddPetSheet().environmentObject(appState)
+            case .editPet(let pet):
+                AddPetSheet(editingPet: pet).environmentObject(appState)
+            case .editPlan(let plan):
+                CarePlanEditSheet(plan: plan)
+                    .environmentObject(appState)
+                    .environmentObject(notifications)
+            case .quickLog(let petId):
+                QuickLogSheet(initialPetId: petId).environmentObject(appState)
+            case .paywall:
+                PaywallView().environmentObject(store)
+            }
         }
         .safeAreaInset(edge: .bottom) {
             if !store.hasPlus && appState.pets.count >= AppState.freeMaxPets {
@@ -92,12 +159,25 @@ struct PetsView: View {
                     Text("Free plan supports 1 pet. Upgrade for unlimited pets.")
                         .font(.footnote)
                     Spacer()
-                    Button("Upgrade") { showPaywall = true }
+                    Button("Upgrade") { sheet = .paywall }
                         .font(.footnote.weight(.semibold))
                 }
                 .padding(12)
                 .background(TPColor.primarySoft)
             }
+        }
+    }
+
+    private func scheduleText(_ plan: CarePlan) -> String {
+        let time = String(format: "%02d:%02d", plan.timeHour, plan.timeMinute)
+        switch plan.repeatRule {
+        case .daily:
+            return "Daily at \(time)"
+        case .onDate:
+            if let d = plan.specificDate {
+                return "\(d.formatted(date: .abbreviated, time: .omitted)) at \(time)"
+            }
+            return "At \(time)"
         }
     }
 
@@ -152,14 +232,30 @@ struct AddPetSheet: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
-    @State private var name = ""
-    @State private var species: Species = .cat
-    @State private var birthYear = Calendar(identifier: .gregorian).component(.year, from: Date()) - 3
-    @State private var weightValue = ""
-    @State private var weightUnit: WeightUnit = AddPetSheet.defaultWeightUnit
+    private let editingPet: Pet?
+
+    @State private var name: String
+    @State private var species: Species
+    @State private var birthYear: Int
+    @State private var weightValue: String
+    @State private var weightUnit: WeightUnit
     @State private var photoItem: PhotosPickerItem?
     @State private var photoData: Data?
+    @State private var existingPhotoName: String?
     @State private var validationMessage: String?
+
+    init(editingPet: Pet? = nil) {
+        self.editingPet = editingPet
+        let thisYear = Calendar(identifier: .gregorian).component(.year, from: Date())
+        _name = State(initialValue: editingPet?.name ?? "")
+        _species = State(initialValue: editingPet?.species ?? .cat)
+        _birthYear = State(initialValue: editingPet?.birthYear ?? (thisYear - 3))
+        _weightValue = State(initialValue: editingPet?.weightValue.map {
+            $0.formatted(.number.precision(.fractionLength(0...1)))
+        } ?? "")
+        _weightUnit = State(initialValue: editingPet?.weightUnit ?? AddPetSheet.defaultWeightUnit)
+        _existingPhotoName = State(initialValue: editingPet?.photoName)
+    }
 
     /// Default unit based on the user's measurement system. US users default to lb,
     /// metric users default to kg. Apple Locale.measurementSystem is iOS 16+.
@@ -178,8 +274,12 @@ struct AddPetSheet: View {
                         ZStack {
                             if let photoData, let uiImage = UIImage(data: photoData) {
                                 Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
+                                    .resizable().scaledToFill()
+                                    .frame(width: 64, height: 64)
+                                    .clipShape(Circle())
+                            } else if let existing = PetImageStore.image(named: existingPhotoName) {
+                                Image(uiImage: existing)
+                                    .resizable().scaledToFill()
                                     .frame(width: 64, height: 64)
                                     .clipShape(Circle())
                             } else {
@@ -197,15 +297,16 @@ struct AddPetSheet: View {
                             matching: .images,
                             photoLibrary: .shared()
                         ) {
-                            Text(photoData == nil ? "Add photo" : "Change photo")
+                            Text((photoData == nil && existingPhotoName == nil) ? "Add photo" : "Change photo")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(TPColor.primary)
                         }
-                        if photoData != nil {
+                        if photoData != nil || existingPhotoName != nil {
                             Spacer()
                             Button("Remove") {
                                 photoData = nil
                                 photoItem = nil
+                                existingPhotoName = nil
                             }
                             .font(.subheadline)
                             .foregroundStyle(TPColor.muted)
@@ -251,14 +352,14 @@ struct AddPetSheet: View {
                     }
                 }
 
-                Button("Save pet") {
+                Button(editingPet == nil ? "Save pet" : "Save changes") {
                     save()
                 }
                 .disabled(!canSave)
                 .buttonStyle(PrimaryPillButtonStyle())
                 .listRowBackground(Color.clear)
             }
-            .navigationTitle("New pet")
+            .navigationTitle(editingPet == nil ? "New pet" : "Edit pet")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -323,17 +424,30 @@ struct AddPetSheet: View {
             parsedWeight = value
         }
 
-        let savedPhotoName = photoData.flatMap { PetImageStore.save($0) }
+        // If the user picked a new photo, persist it; otherwise keep whatever
+        // photo the pet already had (existingPhotoName is cleared by "Remove").
+        let savedPhotoName = photoData.flatMap { PetImageStore.save($0) } ?? existingPhotoName
 
-        let pet = Pet(
-            name: cappedName,
-            species: species,
-            birthYear: birthYear,
-            weightValue: parsedWeight,
-            weightUnit: weightUnit,
-            photoName: savedPhotoName
-        )
-        appState.addPet(pet)
+        if let editingPet {
+            var updated = editingPet
+            updated.name = cappedName
+            updated.species = species
+            updated.birthYear = birthYear
+            updated.weightValue = parsedWeight
+            updated.weightUnit = weightUnit
+            updated.photoName = savedPhotoName
+            appState.updatePet(updated)
+        } else {
+            let pet = Pet(
+                name: cappedName,
+                species: species,
+                birthYear: birthYear,
+                weightValue: parsedWeight,
+                weightUnit: weightUnit,
+                photoName: savedPhotoName
+            )
+            appState.addPet(pet)
+        }
         dismiss()
     }
 }

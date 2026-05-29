@@ -22,17 +22,19 @@ Tend Pets is designed for dogs, cats, rabbits, birds, reptiles, and small animal
 
 Free features:
 
-- Up to 1 pet and 3 active reminders
+- 1 pet with UNLIMITED reminders
 - One-tap Done, Snooze, and Skip
+- Ad-hoc logging of weight, symptoms, and notes
 - Today / Pets / Add / Records tabs
 - Last 7 days of care history
 
 Tend Pets Plus (subscription) adds:
 
-- Unlimited pets and reminders
+- Unlimited pets
 - Full care history (no 7-day limit)
-- Vet Summary builder (30-day medication, weight, vaccine, and visit summary)
-- Export all data as JSON via share sheet
+- Vet Summary with weight trend chart and PDF export
+- Symptom history and full 30-day medication, vaccine, and visit summary
+- Export all data via share sheet
 
 Tend Pets does not provide veterinary medical advice, diagnosis, dosage recommendations, treatment recommendations, or emergency guidance. It is a reminder and record-keeping tool only. Always follow your veterinarian's instructions.
 
@@ -65,10 +67,10 @@ https://tendpets.starving-effort.com/terms
 
 Tend Pets is a reminder and record-keeping utility for pet owners. It does not diagnose, recommend medication dosage, replace veterinary care, or provide emergency guidance.
 
-The app uses local sample data on first launch (one demo pet "Momo") so reviewers can immediately test Today, Add Care, Records, Settings, and the subscription paywall without needing to create data first. Reviewers can delete the demo pet via Settings → Delete all pet data. StoreKit products are configured in `StoreKit/TendPets.storekit` for sandbox testing.
+The app uses local sample data on first launch (demo pets "Momo" the cat and "Rocky" the dog, with photos) so reviewers can immediately test Today, Add Care, Records, Settings, and the subscription paywall without needing to create data first. Reviewers can delete the demo pets via swipe-to-delete or Settings → Delete all pet data. StoreKit products are configured in `StoreKit/TendPets.storekit` for sandbox testing.
 
 **Subscription gating** (verifiable in sandbox):
-- Free tier: 1 pet (PetsView shows "Free plan supports 1 pet" footer when limit hit), 3 active reminders (AddCareView shows "Free plan limit reached" footer), last 7 days of records (RecordsView shows "N older records hidden Plus" row), Vet Summary builder locked (RecordsView shows "Unlock with Plus" button), Export data locked (SettingsView shows "Plus" badge).
+- Free tier: 1 pet (PetsView shows "Free plan supports 1 pet" footer when limit hit), UNLIMITED reminders, ad-hoc weight/symptom/note logging, last 7 days of records (RecordsView shows "N older records hidden Plus" row), Vet Summary builder locked (RecordsView shows "Unlock with Plus" button), Export data locked (SettingsView shows "Plus" badge).
 - Plus tier (any of 4 products): all of the above unlocked.
 
 **Account model**: Tend Pets does not require a user account. All data is stored locally on device. There is no sign-in, no cloud sync, no server-side user profile. Settings → Delete all pet data permanently removes all locally stored data, satisfying the Apple Account Deletion guideline 5.1.1(v) requirement equivalent for local-only apps.

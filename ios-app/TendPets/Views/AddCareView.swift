@@ -118,32 +118,6 @@ struct AddCareView: View {
             PaywallView()
                 .environmentObject(store)
         }
-        .safeAreaInset(edge: .bottom) {
-            if !store.hasPlus {
-                let remaining = AppState.freeMaxActiveCarePlans - appState.activeCarePlanCount
-                if remaining <= 0 {
-                    HStack {
-                        Image(systemName: "lock")
-                        Text("Free plan limit reached. Upgrade to Plus for unlimited reminders.")
-                            .font(.footnote)
-                        Spacer()
-                        Button("Upgrade") { showPaywall = true }
-                            .font(.footnote.weight(.semibold))
-                    }
-                    .padding(12)
-                    .background(TPColor.primarySoft)
-                } else if remaining <= 1 {
-                    HStack {
-                        Image(systemName: "info.circle")
-                        Text("\(remaining) free reminder slot remaining.")
-                            .font(.footnote)
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(TPColor.groupedBackground)
-                }
-            }
-        }
     }
 
     private var canSave: Bool {
@@ -173,12 +147,6 @@ struct AddCareView: View {
             let pet = appState.pet(for: petId)
         else {
             validationMessage = "Choose a pet before saving."
-            return
-        }
-
-        guard appState.canAddCarePlan(hasPlus: store.hasPlus) else {
-            validationMessage = "Free plan supports up to \(AppState.freeMaxActiveCarePlans) active reminders. Upgrade to Plus for unlimited."
-            showPaywall = true
             return
         }
 
@@ -218,7 +186,7 @@ struct AddCareView: View {
     }
 }
 
-private struct AddCareConfig {
+struct AddCareConfig {
     var type: CareType
 
     var namePlaceholder: String {
