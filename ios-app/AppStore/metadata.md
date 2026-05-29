@@ -31,7 +31,10 @@ Free features:
 Tend Pets Plus (subscription) adds:
 
 - Unlimited pets (for multi-pet households)
+- Medication refill tracking with low-supply alerts
 - Vet Summary with weight trend chart and PDF export for vet visits
+- Photo & document attachments (vaccine certificates, lab results) — a vet binder
+- Twice-daily and 3-times-daily medication schedules
 - Export all data via share sheet
 
 Tend Pets does not provide veterinary medical advice, diagnosis, dosage recommendations, treatment recommendations, or emergency guidance. It is a reminder and record-keeping tool only. Always follow your veterinarian's instructions.

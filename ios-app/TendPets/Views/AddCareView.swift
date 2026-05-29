@@ -66,8 +66,22 @@ struct AddCareView: View {
                     .accessibilityHint("Choose the time Tend Pets should remind you.")
                 if !requiresSpecificDate {
                     Picker("Repeat", selection: $repeatRule) {
-                        ForEach(RepeatRule.allCases) { rule in
+                        ForEach(RepeatRule.available(hasPlus: store.hasPlus)) { rule in
                             Text(rule.rawValue).tag(rule)
+                        }
+                    }
+                    if !store.hasPlus {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                Label("Twice / 3× daily schedules", systemImage: "clock.arrow.2.circlepath")
+                                Spacer()
+                                Text("Plus").font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 8).padding(.vertical, 3)
+                                    .background(TPColor.primarySoft, in: Capsule())
+                                    .foregroundStyle(TPColor.primary)
+                            }
                         }
                     }
                 }

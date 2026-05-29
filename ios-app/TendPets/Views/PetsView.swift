@@ -209,6 +209,10 @@ struct PetsView: View {
         switch plan.repeatRule {
         case .daily:
             return "Daily at \(time)"
+        case .twiceDaily:
+            return "Twice daily from \(time)"
+        case .thriceDaily:
+            return "3× daily from \(time)"
         case .onDate:
             if let d = plan.specificDate {
                 return "\(d.formatted(date: .abbreviated, time: .omitted)) at \(time)"

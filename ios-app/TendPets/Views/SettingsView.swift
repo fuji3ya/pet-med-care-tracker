@@ -174,10 +174,13 @@ struct PaywallView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Unlimited pets — free keeps 1 pet with full history", systemImage: "pawprint")
+                        Label("Medication refill tracking + low-supply alerts", systemImage: "pills.circle")
                         Label("Vet summary: weight trend chart + PDF for the vet", systemImage: "doc.richtext")
+                        Label("Photo & document attachments (vet binder)", systemImage: "paperclip")
+                        Label("Twice / 3× daily medication schedules", systemImage: "clock.arrow.2.circlepath")
                         Label("Export all your data", systemImage: "square.and.arrow.up")
                     }
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
 
                     Text("Start with 1 month free. Cancel anytime.")
                         .font(.subheadline.weight(.semibold))

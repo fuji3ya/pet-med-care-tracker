@@ -56,37 +56,41 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
     func schedule(plan: CarePlan, pet: Pet) async {
         guard plan.notificationEnabled else { return }
 
-        let content = UNMutableNotificationContent()
-        content.title = "\(pet.name)'s \(plan.name) is due"
-        content.body = plan.detail
-        content.sound = .default
-        content.categoryIdentifier = "CARE_REMINDER"
-        content.userInfo = [
-            "planId": plan.id.uuidString,
-            "petId": pet.id.uuidString
-        ]
+        // Clear this plan's existing reminders first so a rule/time change never
+        // leaves orphan notifications (twice/thrice-daily use extra identifiers).
+        cancelReminders(for: plan.id)
+        let center = UNUserNotificationCenter.current()
 
-        let trigger: UNNotificationTrigger
+        func makeContent() -> UNMutableNotificationContent {
+            let content = UNMutableNotificationContent()
+            content.title = "\(pet.name)'s \(plan.name) is due"
+            content.body = plan.detail
+            content.sound = .default
+            content.categoryIdentifier = "CARE_REMINDER"
+            content.userInfo = ["planId": plan.id.uuidString, "petId": pet.id.uuidString]
+            return content
+        }
+
         switch plan.repeatRule {
-        case .daily:
-            var components = DateComponents()
-            components.hour = plan.timeHour
-            components.minute = plan.timeMinute
-            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
         case .onDate:
-            guard let specificDate = plan.specificDate else {
-                // Without a date we cannot schedule a one-shot reminder.
-                return
-            }
+            guard let specificDate = plan.specificDate else { return }
             let calendar = Calendar.current
             var components = calendar.dateComponents([.year, .month, .day], from: specificDate)
             components.hour = plan.timeHour
             components.minute = plan.timeMinute
-            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            try? await center.add(UNNotificationRequest(identifier: plan.id.uuidString, content: makeContent(), trigger: trigger))
+        case .daily, .twiceDaily, .thriceDaily:
+            // One repeating daily calendar trigger per dose time.
+            for (i, dose) in plan.doseTimes().enumerated() {
+                var components = DateComponents()
+                components.hour = dose.hour
+                components.minute = dose.minute
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                let identifier = i == 0 ? plan.id.uuidString : "\(plan.id.uuidString).d\(i + 1)"
+                try? await center.add(UNNotificationRequest(identifier: identifier, content: makeContent(), trigger: trigger))
+            }
         }
-
-        let request = UNNotificationRequest(identifier: plan.id.uuidString, content: content, trigger: trigger)
-        try? await UNUserNotificationCenter.current().add(request)
     }
 
     func scheduleSnooze(plan: CarePlan, pet: Pet, minutes: Int) async {
@@ -130,7 +134,9 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
     /// a plan that no longer exists.
     func cancelReminders(for planId: UUID) {
         let center = UNUserNotificationCenter.current()
-        let identifiers = [planId.uuidString, "\(planId.uuidString).snooze"]
+        // Cover the main id, the twice/thrice-daily extra dose ids, and snooze.
+        let base = planId.uuidString
+        let identifiers = [base, "\(base).d2", "\(base).d3", "\(base).snooze"]
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
         center.removeDeliveredNotifications(withIdentifiers: identifiers)
     }

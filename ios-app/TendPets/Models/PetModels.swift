@@ -62,9 +62,18 @@ enum CareType: String, Codable, CaseIterable, Identifiable {
 
 enum RepeatRule: String, Codable, CaseIterable, Identifiable {
     case daily = "Daily"
+    case twiceDaily = "Twice a day"
+    case thriceDaily = "3 times a day"
     case onDate = "On the chosen date"
 
     var id: String { rawValue }
+
+    /// twiceDaily / thriceDaily are Plus (advanced schedules). daily + onDate free.
+    var isPlus: Bool { self == .twiceDaily || self == .thriceDaily }
+
+    static func available(hasPlus: Bool) -> [RepeatRule] {
+        hasPlus ? allCases : allCases.filter { !$0.isPlus }
+    }
 }
 
 struct CarePlan: Identifiable, Codable, Hashable {
@@ -94,11 +103,24 @@ struct CarePlan: Identifiable, Codable, Hashable {
         return supplyRemaining <= Self.lowSupplyThreshold
     }
 
+    /// The time(s) of day this plan fires. Multiple for twice/thrice-daily,
+    /// derived from the base time (BID = +12h, TID = +8h/+16h).
+    func doseTimes() -> [(hour: Int, minute: Int)] {
+        switch repeatRule {
+        case .twiceDaily:
+            return [(timeHour, timeMinute), ((timeHour + 12) % 24, timeMinute)]
+        case .thriceDaily:
+            return [(timeHour, timeMinute), ((timeHour + 8) % 24, timeMinute), ((timeHour + 16) % 24, timeMinute)]
+        case .daily, .onDate:
+            return [(timeHour, timeMinute)]
+        }
+    }
+
     func nextDueDate() -> Date {
         let calendar = Calendar.current
         let baseDate: Date = {
             switch repeatRule {
-            case .daily:
+            case .daily, .twiceDaily, .thriceDaily:
                 return Date()
             case .onDate:
                 return specificDate ?? Date()

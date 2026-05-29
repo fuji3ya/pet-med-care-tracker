@@ -224,8 +224,9 @@ final class AppState: ObservableObject {
         // dependency on NotificationService while still preventing orphan
         // reminders after delete.
         let center = UNUserNotificationCenter.current()
-        let identifiers = planIds.flatMap { id in
-            [id.uuidString, "\(id.uuidString).snooze"]
+        let identifiers = planIds.flatMap { id -> [String] in
+            let base = id.uuidString
+            return [base, "\(base).d2", "\(base).d3", "\(base).snooze"]
         }
         if !identifiers.isEmpty {
             center.removePendingNotificationRequests(withIdentifiers: identifiers)

@@ -57,7 +57,7 @@ struct CarePlanEditSheet: View {
                     DatePicker("Time", selection: $dueTime, displayedComponents: .hourAndMinute)
                     if !requiresSpecificDate {
                         Picker("Repeat", selection: $repeatRule) {
-                            ForEach(RepeatRule.allCases) { Text($0.rawValue).tag($0) }
+                            ForEach(RepeatRule.available(hasPlus: store.hasPlus)) { Text($0.rawValue).tag($0) }
                         }
                     }
                 }
