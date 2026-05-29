@@ -103,7 +103,6 @@ final class AppState: ObservableObject {
     // data export.
 
     static let freeMaxPets = 1
-    static let freeRecordsHistoryDays = 7
 
     func canAddPet(hasPlus: Bool) -> Bool {
         // Sample pets don't count — a new free user can always add their first
@@ -121,10 +120,11 @@ final class AppState: ObservableObject {
         carePlans.filter { $0.active }.count
     }
 
+    /// A pet's own care history is never gated — for 1 pet it stays free and
+    /// permanent. Monetization is value-add (multi-pet, vet PDF, refill alerts),
+    /// not holding the user's data hostage. `hasPlus` kept for call-site stability.
     func recordsVisibleToUser(hasPlus: Bool) -> [CareRecord] {
-        if hasPlus { return records }
-        let cutoff = Calendar.current.date(byAdding: .day, value: -Self.freeRecordsHistoryDays, to: Date()) ?? Date.distantPast
-        return records.filter { $0.date >= cutoff }
+        records
     }
 
     func addPet(_ pet: Pet) {

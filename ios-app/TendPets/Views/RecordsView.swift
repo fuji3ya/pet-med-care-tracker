@@ -9,7 +9,6 @@ struct RecordsView: View {
     var body: some View {
         let visibleRecords = appState.recordsVisibleToUser(hasPlus: store.hasPlus)
         let totalRecords = appState.records.count
-        let hiddenCount = totalRecords - visibleRecords.count
 
         List {
             Section("Vet summary") {
@@ -74,22 +73,6 @@ struct RecordsView: View {
                             }
                         } icon: {
                             Image(systemName: record.type.systemImage)
-                        }
-                    }
-                    if hiddenCount > 0 {
-                        Button {
-                            showPaywall = true
-                        } label: {
-                            HStack {
-                                Label("\(hiddenCount) older record\(hiddenCount == 1 ? "" : "s") hidden", systemImage: "lock")
-                                Spacer()
-                                Text("Plus")
-                                    .font(.caption.weight(.semibold))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(TPColor.primarySoft, in: Capsule())
-                                    .foregroundStyle(TPColor.primary)
-                            }
                         }
                     }
                 }

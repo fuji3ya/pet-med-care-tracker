@@ -173,10 +173,9 @@ struct PaywallView: View {
                         .foregroundStyle(TPColor.muted)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Label("Unlimited pets (free: 1 pet, unlimited reminders)", systemImage: "pawprint")
-                        Label("Vet summary with weight chart + PDF export", systemImage: "doc.richtext")
-                        Label("Symptom log & full care history (free: last 7 days)", systemImage: "stethoscope")
-                        Label("Export all data", systemImage: "square.and.arrow.up")
+                        Label("Unlimited pets — free keeps 1 pet with full history", systemImage: "pawprint")
+                        Label("Vet summary: weight trend chart + PDF for the vet", systemImage: "doc.richtext")
+                        Label("Export all your data", systemImage: "square.and.arrow.up")
                     }
                     .font(.headline)
 
