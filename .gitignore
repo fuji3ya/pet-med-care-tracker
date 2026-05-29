@@ -22,3 +22,5 @@ dist/
 *.cert.pem
 *.csr
 *.mobileprovision
+
+store/review-shots/
