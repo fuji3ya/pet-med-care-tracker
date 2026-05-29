@@ -142,10 +142,17 @@ final class AppState: ObservableObject {
     }
 
     func logWeight(petId: UUID, value: Double, unit: WeightUnit, date: Date = Date(), note: String = "") {
+        // Is this the most recent weight reading for the pet? Only then should it
+        // become the pet's headline weight — logging an older measurement must not
+        // overwrite a newer "current" weight.
+        let isLatest = records
+            .filter { $0.petId == petId && $0.type == .weight }
+            .allSatisfy { $0.date <= date }
+
         let formatted = "\(value.formatted(.number.precision(.fractionLength(0...1)))) \(unit.rawValue)"
         logRecord(petId: petId, type: .weight, title: "Weight check", value: formatted, note: note, date: date)
-        // Keep the pet's headline weight in sync with the latest reading.
-        if let idx = pets.firstIndex(where: { $0.id == petId }) {
+
+        if isLatest, let idx = pets.firstIndex(where: { $0.id == petId }) {
             pets[idx].weightValue = value
             pets[idx].weightUnit = unit
             save()
