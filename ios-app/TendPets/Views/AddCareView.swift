@@ -169,8 +169,8 @@ struct AddCareView: View {
         }
 
         guard
-            let selectedPetId,
-            let pet = appState.pet(for: selectedPetId)
+            let petId = selectedPetId,
+            let pet = appState.pet(for: petId)
         else {
             validationMessage = "Choose a pet before saving."
             return
@@ -197,13 +197,10 @@ struct AddCareView: View {
         validationMessage = nil
 
         // Reset the form so the next reminder starts empty instead of
-        // re-using the previous entry's text.
-        let savedType = type
-        let savedPetId = selectedPetId
+        // re-using the previous entry's text. type and selectedPetId are
+        // @State and persist naturally — only the text fields need clearing.
         name = ""
         detail = ""
-        type = savedType
-        selectedPetId = savedPetId
 
         Task { @MainActor in
             var canScheduleNotification = notifications.isAuthorized

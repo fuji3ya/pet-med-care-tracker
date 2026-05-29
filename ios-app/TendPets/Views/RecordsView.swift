@@ -109,8 +109,11 @@ struct RecordsView: View {
     }
 }
 
-// MARK: - VetSummary — pure value type that derives summary text from actual AppState data.
+// MARK: - VetSummary — derives summary text from actual AppState data.
+// @MainActor because it reads @MainActor-isolated AppState properties; it is
+// always constructed and consumed within View bodies (also MainActor).
 
+@MainActor
 struct VetSummary {
     let appState: AppState
 

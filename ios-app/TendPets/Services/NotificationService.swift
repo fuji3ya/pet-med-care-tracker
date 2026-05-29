@@ -121,7 +121,9 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
         try? await UNUserNotificationCenter.current().add(request)
     }
 
-    static let snoozeDefaultMinutes = 30
+    // nonisolated so the nonisolated UNUserNotificationCenterDelegate callback
+    // (didReceive response) can reference it without crossing actor isolation.
+    nonisolated static let snoozeDefaultMinutes = 30
 
     /// Cancel any pending reminders (main + snooze) for a specific plan. Call this
     /// when the user deletes a care plan so the OS does not fire notifications for
