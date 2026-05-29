@@ -5,6 +5,11 @@ env:
 
 on:
   workflow_dispatch:
+    inputs:
+      upload_testflight:
+        description: "Upload the signed build to TestFlight"
+        type: boolean
+        default: true
   pull_request:
     paths:
       - "ios-app/**"
@@ -17,11 +22,11 @@ on:
       - ".github/workflows/tendpets-ios-cloud-build.yml"
 
 jobs:
+  # Fast unsigned sanity build on every PR/push (no secrets needed).
   simulator-build:
     name: iPhone 15 Simulator Build
     runs-on: macos-15
     timeout-minutes: 45
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -30,16 +35,12 @@ jobs:
         run: |
           xcodebuild -version
           xcrun simctl list runtimes
-          xcrun simctl list devicetypes | grep "iPhone 15"
 
       - name: Create iPhone 15 Simulator
         run: |
           set -euo pipefail
           DEVICE_TYPE=$(xcrun simctl list devicetypes | awk -F '[()]' '/iPhone 15 \(/ { print $2; exit }')
-          RUNTIME=$(xcrun simctl list runtimes available | awk -F ' - ' '/iOS 18.6/ { print $NF; exit }')
-          if [ -z "$RUNTIME" ]; then
-            RUNTIME=$(xcrun simctl list runtimes available | awk -F ' - ' '/iOS 18.5/ { print $NF; exit }')
-          fi
+          RUNTIME=$(xcrun simctl list runtimes available | awk -F ' - ' '/iOS 18\./ { print $NF; exit }')
           if [ -z "$DEVICE_TYPE" ] || [ -z "$RUNTIME" ]; then
             echo "Unable to resolve iPhone 15 simulator device type or iOS runtime." >&2
             exit 1
@@ -71,3 +72,114 @@ jobs:
         with:
           name: tendpets-xcodebuild-log
           path: ios-app/xcodebuild.log
+
+  # Signed archive -> IPA -> TestFlight. Runs on manual dispatch and on push to main.
+  signed-build:
+    name: Signed Archive + TestFlight
+    runs-on: macos-15
+    timeout-minutes: 60
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Import signing certificate and provisioning profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/dist_cert.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$(security cms -D -i "$PROFILE_PATH")")
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
+          echo "Installed provisioning profile UUID: $UUID"
+
+      - name: Generate Xcode project
+        working-directory: ios-app
+        run: xcodegen generate
+
+      - name: Archive (signed)
+        working-directory: ios-app
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project TendPets.xcodeproj \
+            -scheme TendPets \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/TendPets.xcarchive" \
+            -skipPackagePluginValidation \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=YXFS993Z4K \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="Tend Pets App Store Profile" \
+            archive | tee archive.log
+
+      - name: Export IPA
+        working-directory: ios-app
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/TendPets.xcarchive" \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates | tee export.log
+          ls -la "$RUNNER_TEMP/export"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tendpets-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+
+      - name: Upload to TestFlight
+        if: github.event_name == 'push' || inputs.upload_testflight
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/private_keys"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/private_keys/AuthKey_${ASC_API_KEY_ID}.p8"
+          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
+          echo "Uploading $IPA to TestFlight..."
+          xcrun altool --upload-app \
+            -f "$IPA" \
+            -t ios \
+            --apiKey "$ASC_API_KEY_ID" \
+            --apiIssuer "$ASC_API_ISSUER_ID"
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tendpets-signed-logs
+          path: |
+            ios-app/archive.log
+            ios-app/export.log

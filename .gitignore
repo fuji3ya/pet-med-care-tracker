@@ -12,3 +12,13 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Signing credentials — NEVER commit
+.secrets/
+*.p8
+*.p12
+*.key
+*.cer
+*.cert.pem
+*.csr
+*.mobileprovision
