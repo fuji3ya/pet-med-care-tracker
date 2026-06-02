@@ -65,11 +65,8 @@ struct SettingsView: View {
                         }
                     }
                 }
-                NavigationLink("Medical disclaimer") {
-                    LegalTextView(
-                        title: "Disclaimer",
-                        content: "Tend Pets helps you record and remember care routines. It does not diagnose, recommend medication dosage, replace veterinary care, or provide emergency guidance. Always follow your veterinarian's instructions."
-                    )
+                NavigationLink("Medical disclaimer & sources") {
+                    MedicalSafetyView()
                 }
             }
 
@@ -455,6 +452,81 @@ struct PaywallView: View {
         .foregroundStyle(TPColor.muted)
         .frame(maxWidth: .infinity)
         .padding(.top, 2)
+    }
+}
+
+/// Medical disclaimer + citations to reputable veterinary sources.
+/// Required by App Store Guideline 1.4.1 for apps that surface health/medical
+/// information: the app must (a) state it does not give medical advice and
+/// (b) cite easy-to-find authoritative sources.
+struct MedicalSafetyView: View {
+    private struct Source: Identifiable {
+        let id = UUID()
+        let name: String
+        let detail: String
+        let url: URL
+    }
+
+    private let sources: [Source] = [
+        Source(name: "American Veterinary Medical Association (AVMA)",
+               detail: "Pet owner resources on medication, vaccines, and preventive care.",
+               url: URL(string: "https://www.avma.org/resources-tools/pet-owners")!),
+        Source(name: "American Animal Hospital Association (AAHA)",
+               detail: "Canine and feline vaccination guidelines.",
+               url: URL(string: "https://www.aaha.org/resources/")!),
+        Source(name: "WSAVA Global Vaccination Guidelines",
+               detail: "International standards for pet vaccination schedules.",
+               url: URL(string: "https://wsava.org/global-guidelines/vaccination-guidelines/")!),
+        Source(name: "U.S. FDA — Animal & Veterinary",
+               detail: "Approved animal drugs and medication safety information.",
+               url: URL(string: "https://www.fda.gov/animal-veterinary")!),
+        Source(name: "ASPCA — Pet Care",
+               detail: "General pet health and care guidance.",
+               url: URL(string: "https://www.aspca.org/pet-care")!),
+    ]
+
+    var body: some View {
+        List {
+            Section {
+                Text("Tend Pets is a reminder and record-keeping tool. It does **not** diagnose conditions, recommend medications or dosages, replace veterinary care, or provide emergency guidance. Always follow your veterinarian's instructions, and contact your veterinarian or an emergency animal hospital for any health concern.")
+                    .font(.subheadline)
+                    .foregroundStyle(TPColor.text)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 4)
+            } header: {
+                Text("Important")
+            }
+
+            Section {
+                ForEach(sources) { source in
+                    Link(destination: source.url) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text(source.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(TPColor.primary)
+                                Spacer()
+                                Image(systemName: "arrow.up.right.square")
+                                    .foregroundStyle(TPColor.muted)
+                            }
+                            Text(source.detail)
+                                .font(.caption)
+                                .foregroundStyle(TPColor.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            } header: {
+                Text("Trusted sources")
+            } footer: {
+                Text("Any health information you record in Tend Pets comes from you and your veterinarian. These independent organizations publish accurate, citable pet-health guidance.")
+            }
+        }
+        .navigationTitle("Disclaimer & sources")
+        .navigationBarTitleDisplayMode(.inline)
+        .scrollContentBackground(.hidden)
+        .background(TPColor.groupedBackground)
     }
 }
 

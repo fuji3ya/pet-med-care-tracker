@@ -85,6 +85,16 @@ struct RecordsView: View {
                     }
                 }
             }
+
+            Section {
+                NavigationLink {
+                    MedicalSafetyView()
+                } label: {
+                    Label("Medical disclaimer & sources", systemImage: "cross.case")
+                }
+            } footer: {
+                Text("Tend Pets records the care you and your vet decide on — it does not give medical advice. Tap above for the disclaimer and citations to trusted veterinary sources.")
+            }
         }
         .navigationTitle("Records")
         .scrollContentBackground(.hidden)
