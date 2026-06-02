@@ -15,8 +15,14 @@ final class SubscriptionStore: ObservableObject {
     @Published var products: [Product] = []
     @Published var purchasedProductIds: Set<String> = []
     @Published var isLoading = false
-    @Published var isPurchasing = false
+    /// The product whose App Store purchase sheet is currently in flight, or nil.
+    /// Per-product (not a global bool) so only the tapped row shows "Processing…"
+    /// while the other rows keep showing their price.
+    @Published var purchasingProductId: String?
     @Published var message: String?
+
+    /// True while any purchase is in flight (used to disable Close / Restore).
+    var isPurchasing: Bool { purchasingProductId != nil }
 
     private var updatesTask: Task<Void, Never>?
 
@@ -48,9 +54,9 @@ final class SubscriptionStore: ObservableObject {
     }
 
     func purchase(_ product: Product) async {
-        guard !isPurchasing else { return }
-        isPurchasing = true
-        defer { isPurchasing = false }
+        guard purchasingProductId == nil else { return }
+        purchasingProductId = product.id
+        defer { purchasingProductId = nil }
 
         do {
             let result = try await product.purchase()

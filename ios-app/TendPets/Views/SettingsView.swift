@@ -163,6 +163,23 @@ struct PaywallView: View {
     private static let termsURL = URL(string: "https://tendpets.starving-effort.com/terms")!
     private static let privacyURL = URL(string: "https://tendpets.starving-effort.com/privacy")!
 
+    /// Compact "price / period" label, e.g. "¥800 / mo", "¥5,800 / yr".
+    /// Falls back to the raw localized price if no subscription period.
+    private func priceLabel(_ product: Product) -> String {
+        guard let period = product.subscription?.subscriptionPeriod else {
+            return product.displayPrice
+        }
+        let unit: String
+        switch period.unit {
+        case .day: unit = "day"
+        case .week: unit = "wk"
+        case .month: unit = "mo"
+        case .year: unit = "yr"
+        @unknown default: unit = ""
+        }
+        return unit.isEmpty ? product.displayPrice : "\(product.displayPrice) / \(unit)"
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -181,6 +198,10 @@ struct PaywallView: View {
                         Label("Export all your data", systemImage: "square.and.arrow.up")
                     }
                     .font(.subheadline.weight(.semibold))
+                    // Allow each feature row to wrap to as many lines as it needs
+                    // instead of truncating / spilling past the edge.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text("Start with 1 month free. Cancel anytime.")
                         .font(.subheadline.weight(.semibold))
@@ -202,13 +223,24 @@ struct PaywallView: View {
                                     }
                                 }
                             } label: {
-                                HStack {
+                                HStack(spacing: 12) {
                                     Text(product.displayName)
-                                    Spacer()
-                                    Text(store.isPurchasing ? "Processing…" : product.displayPrice)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                    Spacer(minLength: 8)
+                                    if store.purchasingProductId == product.id {
+                                        Text("Processing…")
+                                            .foregroundStyle(TPColor.muted)
+                                    } else {
+                                        Text(priceLabel(product))
+                                            .lineLimit(1)
+                                            .layoutPriority(1)
+                                    }
                                 }
                             }
                             .buttonStyle(NeutralPillButtonStyle())
+                            // Block double-purchases while any sheet is in flight,
+                            // but only the tapped row shows "Processing…".
                             .disabled(store.isPurchasing)
                             .accessibilityHint("Starts an App Store purchase sheet.")
                         }
