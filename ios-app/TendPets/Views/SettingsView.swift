@@ -1,5 +1,6 @@
 import SwiftUI
 import StoreKit
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
@@ -161,136 +162,299 @@ struct PaywallView: View {
     @EnvironmentObject private var store: SubscriptionStore
     @Environment(\.dismiss) private var dismiss
 
+    enum Tier: String, CaseIterable, Identifiable {
+        case plus = "Plus"
+        case family = "Family"
+        var id: String { rawValue }
+    }
+
+    @State private var tier: Tier = .plus
+    @State private var selectedProductId: String?
+
     private static let termsURL = URL(string: "https://tendpets.starving-effort.com/terms")!
     private static let privacyURL = URL(string: "https://tendpets.starving-effort.com/privacy")!
 
-    /// Compact "price / period" label, e.g. "¥800 / mo", "¥5,800 / yr".
-    /// Falls back to the raw localized price if no subscription period.
-    private func priceLabel(_ product: Product) -> String {
-        guard let period = product.subscription?.subscriptionPeriod else {
-            return product.displayPrice
+    // MARK: - Product helpers
+
+    private func product(_ tier: Tier, yearly: Bool) -> Product? {
+        let id: String
+        switch (tier, yearly) {
+        case (.plus, true): id = SubscriptionStore.ProductId.plusYearly
+        case (.plus, false): id = SubscriptionStore.ProductId.plusMonthly
+        case (.family, true): id = SubscriptionStore.ProductId.familyYearly
+        case (.family, false): id = SubscriptionStore.ProductId.familyMonthly
         }
-        let unit: String
-        switch period.unit {
-        case .day: unit = "day"
-        case .week: unit = "wk"
-        case .month: unit = "mo"
-        case .year: unit = "yr"
-        @unknown default: unit = ""
-        }
-        return unit.isEmpty ? product.displayPrice : "\(product.displayPrice) / \(unit)"
+        return store.products.first { $0.id == id }
     }
 
-    // Extracted to its own builder so the main `body` stays small enough for the
-    // SwiftUI type-checker (large bodies hit "unable to type-check in reasonable time").
-    @ViewBuilder
-    private func productButton(_ product: Product) -> some View {
-        Button {
-            Task {
-                await store.purchase(product)
-                if store.hasPlus {
-                    dismiss()
-                }
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Text(product.displayName)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 8)
-                if store.purchasingProductId == product.id {
-                    Text("Processing…")
-                        .foregroundStyle(TPColor.muted)
-                } else {
-                    Text(priceLabel(product))
-                        .lineLimit(1)
-                        .layoutPriority(1)
-                }
-            }
-        }
-        .buttonStyle(NeutralPillButtonStyle())
-        // Block double-purchases while any sheet is in flight, but only the
-        // tapped row shows "Processing…".
-        .disabled(store.isPurchasing)
-        .accessibilityHint("Starts an App Store purchase sheet.")
+    private var selectedProduct: Product? {
+        store.products.first { $0.id == selectedProductId }
     }
+
+    private var selectedIsYearly: Bool {
+        selectedProductId?.hasSuffix(".yearly") ?? false
+    }
+
+    /// Default the selection to the current tier's yearly plan when none is set
+    /// or the current one no longer matches the visible tier.
+    private func setDefaultSelection() {
+        let yearlyId = product(tier, yearly: true)?.id
+        let monthlyId = product(tier, yearly: false)?.id
+        if selectedProductId == nil || (selectedProductId != yearlyId && selectedProductId != monthlyId) {
+            selectedProductId = yearlyId ?? monthlyId
+        }
+    }
+
+    private func perMonthLabel(_ product: Product) -> String {
+        (product.price / 12).formatted(product.priceFormatStyle)
+    }
+
+    private func savingsPercent(_ tier: Tier) -> Int? {
+        guard let yearly = product(tier, yearly: true),
+              let monthly = product(tier, yearly: false) else { return nil }
+        let yearOfMonthly = monthly.price * 12
+        guard yearOfMonthly > 0 else { return nil }
+        let saved = 1 - (NSDecimalNumber(decimal: yearly.price).doubleValue
+                         / NSDecimalNumber(decimal: yearOfMonthly).doubleValue)
+        let pct = Int((saved * 100).rounded())
+        return pct > 0 ? pct : nil
+    }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("Keep every routine organized")
-                        .font(.largeTitle.weight(.bold))
-                    Text("For pets with daily care, shared routines, and vet-ready records.")
-                        .foregroundStyle(TPColor.muted)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("Unlimited pets — free keeps 1 pet with full history", systemImage: "pawprint")
-                        Label("Medication refill tracking + low-supply alerts", systemImage: "pills.circle")
-                        Label("Vet summary: weight trend chart + PDF for the vet", systemImage: "doc.richtext")
-                        Label("Photo & document attachments (vet binder)", systemImage: "paperclip")
-                        Label("Twice / 3× daily medication schedules", systemImage: "clock.arrow.2.circlepath")
-                        Label("Export all your data", systemImage: "square.and.arrow.up")
+                VStack(alignment: .leading, spacing: 22) {
+                    heroSection
+                    featureList
+                    Picker("Plan tier", selection: $tier) {
+                        ForEach(Tier.allCases) { Text($0.rawValue).tag($0) }
                     }
-                    .font(.subheadline.weight(.semibold))
-                    // Allow each feature row to wrap to as many lines as it needs
-                    // instead of truncating / spilling past the edge.
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .pickerStyle(.segmented)
 
-                    Text("Start with 1 month free. Cancel anytime.")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(TPColor.primary)
-
-                    if store.isLoading {
-                        ProgressView("Loading subscriptions")
-                            .foregroundStyle(TPColor.muted)
-                    } else if store.products.isEmpty {
-                        Text("Subscriptions are unavailable. You can still use the free care tracker.")
-                            .foregroundStyle(TPColor.muted)
-                    } else {
-                        ForEach(store.products, id: \.id) { product in
-                            productButton(product)
-                        }
-                    }
-
-                    Button("Restore Purchase") {
-                        Task {
-                            await store.refreshEntitlements()
-                            if store.hasPlus {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .buttonStyle(NeutralPillButtonStyle())
-                    .disabled(store.isPurchasing)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Subscription terms")
-                            .font(.footnote.weight(.bold))
-                        Text("Tend Pets Plus and Family are auto-renewing subscriptions. After the 1-month free trial, payment is charged to your Apple ID account at the displayed price. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. Subscriptions can be managed and auto-renewal turned off in your Apple ID account settings after purchase.")
-                        Text("Tend Pets helps organize reminders and records. It does not provide veterinary medical advice.")
-
-                        HStack(spacing: 16) {
-                            Link("Terms of Use", destination: Self.termsURL)
-                            Link("Privacy Policy", destination: Self.privacyURL)
-                        }
-                        .padding(.top, 4)
-                    }
-                    .font(.footnote)
-                    .foregroundStyle(TPColor.muted)
+                    planSection
+                    ctaSection
+                    termsSection
                 }
-                .padding()
+                .padding(20)
             }
-            .navigationTitle("Tend Pets Plus")
+            .scrollContentBackground(.hidden)
+            .background(TPColor.background)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                Button("Close") {
-                    dismiss()
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(TPColor.muted)
+                    }
+                    .disabled(store.isPurchasing)
+                    .accessibilityLabel("Close")
                 }
-                .disabled(store.isPurchasing)
+            }
+            .onAppear { setDefaultSelection() }
+            .onChange(of: tier) { _, _ in setDefaultSelection() }
+            .onChange(of: store.products.map(\.id)) { _, _ in setDefaultSelection() }
+        }
+    }
+
+    // MARK: - Sections
+
+    private var heroSection: some View {
+        VStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(LinearGradient(colors: [Color(red: 0.235, green: 0.510, blue: 0.439), TPColor.primary],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 84, height: 84)
+                .overlay(
+                    Image(systemName: "pawprint.fill")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(.white)
+                )
+                .shadow(color: TPColor.primary.opacity(0.35), radius: 12, y: 6)
+
+            Text("TEND PETS PLUS")
+                .font(.caption.weight(.bold))
+                .tracking(1.5)
+                .foregroundStyle(TPColor.primary)
+
+            Text("Everything your pet's care needs, in one place")
+                .font(.title2.weight(.bold))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Refill alerts, vet-ready summaries, and routines for every pet you love.")
+                .font(.subheadline)
+                .foregroundStyle(TPColor.muted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var featureList: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            featureRow("pawprint.fill", TPColor.primary, "Unlimited pets — free keeps 1 with full history")
+            featureRow("pills.fill", TPColor.medicine, "Medication refill tracking + low-supply alerts")
+            featureRow("doc.text.fill", TPColor.visit, "Vet summary: weight chart + PDF for the vet")
+            featureRow("paperclip", TPColor.food, "Photo & document attachments (vet binder)")
+            featureRow("clock.arrow.2.circlepath", TPColor.alert, "Twice / 3× daily medication schedules")
+        }
+    }
+
+    @ViewBuilder
+    private func featureRow(_ icon: String, _ tint: Color, _ text: String) -> some View {
+        HStack(spacing: 13) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            Text(text)
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+    }
+
+    @ViewBuilder
+    private var planSection: some View {
+        if store.isLoading {
+            ProgressView("Loading subscriptions")
+                .foregroundStyle(TPColor.muted)
+                .frame(maxWidth: .infinity)
+        } else if store.products.isEmpty {
+            Text("Subscriptions are unavailable. You can still use the free care tracker.")
+                .font(.subheadline)
+                .foregroundStyle(TPColor.muted)
+        } else {
+            VStack(spacing: 12) {
+                if let yearly = product(tier, yearly: true) {
+                    planCard(yearly, isYearly: true)
+                }
+                if let monthly = product(tier, yearly: false) {
+                    planCard(monthly, isYearly: false)
+                }
             }
         }
+    }
+
+    @ViewBuilder
+    private func planCard(_ product: Product, isYearly: Bool) -> some View {
+        let selected = selectedProductId == product.id
+        Button {
+            selectedProductId = product.id
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .strokeBorder(selected ? TPColor.primary : Color(.systemGray3), lineWidth: 2)
+                    if selected {
+                        Circle().fill(TPColor.primary)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(width: 24, height: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(product.displayName)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(TPColor.text)
+                    Text(isYearly ? "\(perMonthLabel(product)) / mo" : "billed monthly")
+                        .font(.caption)
+                        .foregroundStyle(TPColor.muted)
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(product.displayPrice)
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(TPColor.text)
+                    Text(isYearly ? "/ year" : "/ month")
+                        .font(.caption2)
+                        .foregroundStyle(TPColor.muted)
+                }
+            }
+            .padding(16)
+            .background(selected ? TPColor.primarySoft.opacity(0.55) : TPColor.surface,
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(selected ? TPColor.primary : Color(.systemGray5),
+                                  lineWidth: selected ? 1.6 : 1)
+            )
+            .overlay(alignment: .topTrailing) {
+                if isYearly, let pct = savingsPercent(tier) {
+                    Text("SAVE \(pct)%")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(TPColor.primary, in: Capsule())
+                        .offset(x: -14, y: -9)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(store.isPurchasing)
+    }
+
+    private var ctaSection: some View {
+        VStack(spacing: 10) {
+            Button {
+                guard let product = selectedProduct else { return }
+                Task {
+                    await store.purchase(product)
+                    if store.hasPlus { dismiss() }
+                }
+            } label: {
+                if store.isPurchasing {
+                    HStack(spacing: 8) {
+                        ProgressView().tint(.white)
+                        Text("Processing…")
+                    }
+                } else {
+                    Text("Start my free month")
+                }
+            }
+            .buttonStyle(PrimaryPillButtonStyle())
+            .disabled(selectedProduct == nil || store.isPurchasing)
+
+            if let product = selectedProduct {
+                Text("Then \(product.displayPrice) \(selectedIsYearly ? "/ year" : "/ month") after your free month")
+                    .font(.footnote)
+                    .foregroundStyle(TPColor.muted)
+            }
+
+            Button("Restore Purchase") {
+                Task {
+                    await store.refreshEntitlements()
+                    if store.hasPlus { dismiss() }
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(TPColor.primary)
+            .disabled(store.isPurchasing)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var termsSection: some View {
+        VStack(spacing: 6) {
+            Text("1-month free trial, then the price shown. Subscriptions auto-renew at the displayed price unless cancelled at least 24 hours before the period ends. Manage or cancel anytime in your Apple ID settings.")
+                .multilineTextAlignment(.center)
+            HStack(spacing: 16) {
+                Link("Terms of Use", destination: Self.termsURL)
+                Link("Privacy Policy", destination: Self.privacyURL)
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(TPColor.muted)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 2)
     }
 }
 
