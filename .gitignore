@@ -31,3 +31,14 @@ scripts/asc-*.py
 scripts/create-provisioning-profile.py
 scripts/letterbox-screenshots.py
 ios-app/DevTools/
+
+# Internal planning/process docs — keep private, not in public app repo
+codemagic.yaml
+prototype/
+cross-opinion-*.md
+mockup-*.md
+*-plan.md
+release-readiness-audit.md
+handoff-*.md
+ios-premium-ux-spec.md
+legal/.wrangler/
