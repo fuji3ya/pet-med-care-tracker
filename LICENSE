@@ -1,0 +1,23 @@
+Copyright (c) 2026 starving-effort. All Rights Reserved.
+
+This repository is made publicly visible for transparency, review, and
+reference purposes only. It is NOT open-source software.
+
+No permission is granted, expressly or by implication, to any person to:
+  - use this software or any part of it for any commercial or production purpose;
+  - copy, reproduce, or redistribute the source code or compiled binaries;
+  - modify the code or create derivative works;
+  - sublicense, sell, or otherwise transfer any portion of this software.
+
+You MAY read and study the source code for personal, non-commercial,
+educational purposes only.
+
+Third-party dependencies (e.g. Expo, React Native, and packages installed
+via npm) remain governed by their own respective licenses. This notice
+applies solely to the original source code authored in this repository.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR
+ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THIS SOFTWARE.
+
+For licensing inquiries, contact the copyright holder.
