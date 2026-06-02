@@ -24,3 +24,10 @@ dist/
 *.mobileprovision
 
 store/review-shots/
+
+# Internal ASC/ops tooling — never ship in the public app repo (leaks account IDs/paths)
+store/
+scripts/asc-*.py
+scripts/create-provisioning-profile.py
+scripts/letterbox-screenshots.py
+ios-app/DevTools/
