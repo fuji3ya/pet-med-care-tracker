@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
@@ -180,6 +181,40 @@ struct PaywallView: View {
         return unit.isEmpty ? product.displayPrice : "\(product.displayPrice) / \(unit)"
     }
 
+    // Extracted to its own builder so the main `body` stays small enough for the
+    // SwiftUI type-checker (large bodies hit "unable to type-check in reasonable time").
+    @ViewBuilder
+    private func productButton(_ product: Product) -> some View {
+        Button {
+            Task {
+                await store.purchase(product)
+                if store.hasPlus {
+                    dismiss()
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text(product.displayName)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 8)
+                if store.purchasingProductId == product.id {
+                    Text("Processing…")
+                        .foregroundStyle(TPColor.muted)
+                } else {
+                    Text(priceLabel(product))
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                }
+            }
+        }
+        .buttonStyle(NeutralPillButtonStyle())
+        // Block double-purchases while any sheet is in flight, but only the
+        // tapped row shows "Processing…".
+        .disabled(store.isPurchasing)
+        .accessibilityHint("Starts an App Store purchase sheet.")
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -215,34 +250,7 @@ struct PaywallView: View {
                             .foregroundStyle(TPColor.muted)
                     } else {
                         ForEach(store.products, id: \.id) { product in
-                            Button {
-                                Task {
-                                    await store.purchase(product)
-                                    if store.hasPlus {
-                                        dismiss()
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Text(product.displayName)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                    Spacer(minLength: 8)
-                                    if store.purchasingProductId == product.id {
-                                        Text("Processing…")
-                                            .foregroundStyle(TPColor.muted)
-                                    } else {
-                                        Text(priceLabel(product))
-                                            .lineLimit(1)
-                                            .layoutPriority(1)
-                                    }
-                                }
-                            }
-                            .buttonStyle(NeutralPillButtonStyle())
-                            // Block double-purchases while any sheet is in flight,
-                            // but only the tapped row shows "Processing…".
-                            .disabled(store.isPurchasing)
-                            .accessibilityHint("Starts an App Store purchase sheet.")
+                            productButton(product)
                         }
                     }
 
