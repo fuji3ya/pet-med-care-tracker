@@ -24,6 +24,24 @@ final class SubscriptionStore: ObservableObject {
     /// True while any purchase is in flight (used to disable Close / Restore).
     var isPurchasing: Bool { purchasingProductId != nil }
 
+    /// Whether the customer can still get the free-trial intro offer. Apple
+    /// grants the intro offer once per subscription group, and only in
+    /// territories where the offer is configured. Drives the paywall CTA so we
+    /// never promise a "free month" to someone who won't actually get one
+    /// (avoids a misleading offer — App Review Guideline 3.1.2).
+    @Published var introOfferEligible = true
+
+    /// End date of the customer's current free-trial period, or nil if they are
+    /// not currently in a trial. Drives the "Plus trial — X days left" status.
+    @Published var trialEndDate: Date?
+
+    /// Whole days remaining in the current free trial (nil if not in a trial).
+    var trialDaysLeft: Int? {
+        guard let end = trialEndDate else { return nil }
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: end).day ?? 0
+        return max(0, days)
+    }
+
     private var updatesTask: Task<Void, Never>?
 
     var hasPlus: Bool {
@@ -47,6 +65,11 @@ final class SubscriptionStore: ObservableObject {
             let loadedProducts = try await Product.products(for: Array(ProductId.all))
             products = loadedProducts.sorted { first, second in
                 productSortIndex(first.id) < productSortIndex(second.id)
+            }
+            // Intro-offer eligibility is per subscription group; all four plans
+            // share one group, so any product's subscription answers it.
+            if let subscription = products.first(where: { $0.subscription != nil })?.subscription {
+                introOfferEligible = await subscription.isEligibleForIntroOffer
             }
         } catch {
             message = "Unable to load subscriptions. Please check your connection and try again."
@@ -83,14 +106,21 @@ final class SubscriptionStore: ObservableObject {
 
     func refreshEntitlements() async {
         var current: Set<String> = []
+        var trialEnd: Date?
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result {
                 current.insert(transaction.productID)
+                // Detect an active free-trial period so the UI can show a countdown.
+                if transaction.offerType == .introductory,
+                   let expiration = transaction.expirationDate, expiration > Date() {
+                    trialEnd = expiration
+                }
             }
         }
         // Assign once at the end to avoid the UI briefly showing hasPlus = false
         // during a slow network restore.
         purchasedProductIds = current
+        trialEndDate = trialEnd
     }
 
     private func startTransactionListener() {

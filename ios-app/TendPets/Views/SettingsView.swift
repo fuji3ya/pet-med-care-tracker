@@ -33,6 +33,14 @@ struct SettingsView: View {
             }
 
             Section("Subscription") {
+                if let days = store.trialDaysLeft {
+                    HStack {
+                        Label("Plus free trial", systemImage: "sparkles")
+                        Spacer()
+                        Text(days == 1 ? "1 day left" : "\(days) days left")
+                            .foregroundStyle(TPColor.muted)
+                    }
+                }
                 Button(store.hasPlus ? "Manage Tend Pets Plus" : "Upgrade to Plus") {
                     showPaywall = true
                 }
@@ -399,6 +407,16 @@ struct PaywallView: View {
         .disabled(store.isPurchasing)
     }
 
+    /// Honest one-line explainer under the CTA, matching the customer's state.
+    private func ctaSubtext(_ product: Product) -> String {
+        let period = selectedIsYearly ? "/ year" : "/ month"
+        if store.introOfferEligible {
+            return "1 month free, then \(product.displayPrice) \(period). Cancel anytime."
+        } else {
+            return "\(product.displayPrice) \(period). Cancel anytime."
+        }
+    }
+
     private var ctaSection: some View {
         VStack(spacing: 10) {
             Button {
@@ -414,16 +432,21 @@ struct PaywallView: View {
                         Text("Processing…")
                     }
                 } else {
-                    Text("Start my free month")
+                    // State-aware: only promise a free month when the customer is
+                    // actually eligible for the intro offer; otherwise it's a
+                    // straight subscribe.
+                    Text(store.introOfferEligible ? "Start my free month" : "Subscribe")
                 }
             }
             .buttonStyle(PrimaryPillButtonStyle())
             .disabled(selectedProduct == nil || store.isPurchasing)
 
             if let product = selectedProduct {
-                Text("Then \(product.displayPrice) \(selectedIsYearly ? "/ year" : "/ month") after your free month")
+                Text(ctaSubtext(product))
                     .font(.footnote)
                     .foregroundStyle(TPColor.muted)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Button("Restore Purchase") {
