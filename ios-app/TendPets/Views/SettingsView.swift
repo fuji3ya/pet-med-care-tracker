@@ -7,6 +7,7 @@ struct SettingsView: View {
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var store: SubscriptionStore
     @State private var showPaywall = false
+    @State private var showManageSubscriptions = false
     @State private var showDeleteConfirmation = false
     @State private var showNotificationDisabledAlert = false
     var replayOnboarding: () -> Void = {}
@@ -42,7 +43,13 @@ struct SettingsView: View {
                     }
                 }
                 Button(store.hasPlus ? "Manage Tend Pets Plus" : "Upgrade to Plus") {
-                    showPaywall = true
+                    // Subscribers go to Apple's manage-subscriptions sheet (cancel /
+                    // switch plan); non-subscribers see the in-app paywall.
+                    if store.hasPlus {
+                        showManageSubscriptions = true
+                    } else {
+                        showPaywall = true
+                    }
                 }
                 Button("Restore Purchase") {
                     Task { await store.refreshEntitlements() }
@@ -124,6 +131,7 @@ struct SettingsView: View {
             PaywallView()
                 .environmentObject(store)
         }
+        .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
         .alert("Tend Pets", isPresented: Binding(
             get: { store.message != nil },
             set: { if !$0 { store.message = nil } }
