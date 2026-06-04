@@ -39,7 +39,10 @@ Tend Pets Plus (subscription) adds:
 
 Tend Pets does not provide veterinary medical advice, diagnosis, dosage recommendations, treatment recommendations, or emergency guidance. It is a reminder and record-keeping tool only. Always follow your veterinarian's instructions.
 
-Tend Pets Plus is an auto-renewing subscription. Plus Monthly is $4.99 per month and Plus Yearly is $35.99 per year (Family tiers also available). Each plan starts with a 1-month free trial. Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription any time in your Apple ID account settings after purchase. See the Terms of Use and Privacy Policy linked in the app and on the support site.
+Tend Pets Plus is an auto-renewing subscription. Plus Monthly is $4.99 per month and Plus Yearly is $34.99 per year (Family tiers also available). Each plan starts with a 1-month free trial. Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription any time in your Apple ID account settings after purchase.
+
+Terms of Use (EULA): https://tendpets.starving-effort.com/terms
+Privacy Policy: https://tendpets.starving-effort.com/privacy
 
 ## Keywords
 
