@@ -382,9 +382,12 @@ struct PaywallView: View {
                         .foregroundStyle(TPColor.muted)
                 }
                 Spacer(minLength: 8)
+                // 3.1.2(c): the billed amount must be the most clear and
+                // conspicuous pricing element — larger than any trial or
+                // per-month calculated price on this screen.
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(product.displayPrice)
-                        .font(.body.weight(.bold))
+                        .font(.title3.weight(.heavy))
                         .foregroundStyle(TPColor.text)
                     Text(isYearly ? "/ year" : "/ month")
                         .font(.caption2)
@@ -416,12 +419,13 @@ struct PaywallView: View {
     }
 
     /// Honest one-line explainer under the CTA, matching the customer's state.
+    /// 3.1.2(c): must state that payment starts automatically when the trial ends.
     private func ctaSubtext(_ product: Product) -> String {
-        let period = selectedIsYearly ? "/ year" : "/ month"
+        let period = selectedIsYearly ? "per year" : "per month"
         if store.introOfferEligible {
-            return "1 month free, then \(product.displayPrice) \(period). Cancel anytime."
+            return "Free for 1 month, then auto-renews at \(product.displayPrice) \(period) until cancelled. Cancel anytime in Apple ID settings."
         } else {
-            return "\(product.displayPrice) \(period). Cancel anytime."
+            return "Auto-renews at \(product.displayPrice) \(period) until cancelled. Cancel anytime in Apple ID settings."
         }
     }
 
@@ -439,11 +443,18 @@ struct PaywallView: View {
                         ProgressView().tint(.white)
                         Text("Processing…")
                     }
+                } else if store.introOfferEligible, let product = selectedProduct {
+                    // 3.1.2(c): the trial CTA itself must say, no less prominently,
+                    // that an auto-renewing subscription follows the trial.
+                    VStack(spacing: 2) {
+                        Text("Try Free for 1 Month")
+                        Text("then \(product.displayPrice) \(selectedIsYearly ? "per year" : "per month") · auto-renews")
+                            .font(.caption.weight(.semibold))
+                            .opacity(0.95)
+                    }
+                    .padding(.vertical, 8)
                 } else {
-                    // State-aware: only promise a free month when the customer is
-                    // actually eligible for the intro offer; otherwise it's a
-                    // straight subscribe.
-                    Text(store.introOfferEligible ? "Start my free month" : "Subscribe")
+                    Text("Subscribe")
                 }
             }
             .buttonStyle(PrimaryPillButtonStyle())
